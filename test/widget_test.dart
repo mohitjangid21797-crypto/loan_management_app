@@ -1,30 +1,33 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:loan_management_app/main.dart';
+import 'package:loan_management_app/app.dart';
+import 'package:loan_management_app/core/constants/app_constants.dart';
+import 'package:loan_management_app/core/router/app_router.dart';
+import 'package:loan_management_app/presentation/providers/auth_provider.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('launches to splash, then the main shell', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: LoanManagerApp()));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+
+    await tester.pump(
+      AppConstants.splashDuration + const Duration(milliseconds: 100),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Dashboard'), findsWidgets);
+  });
+
+  test('redirectFor sends each auth state to the right place', () {
+    expect(redirectFor(AuthStatus.unknown, '/dashboard'), '/splash');
+    expect(redirectFor(AuthStatus.unknown, '/splash'), isNull);
+    expect(redirectFor(AuthStatus.needsSetup, '/splash'), '/set-mpin');
+    expect(redirectFor(AuthStatus.locked, '/dashboard'), '/login');
+    expect(redirectFor(AuthStatus.unlocked, '/splash'), '/dashboard');
+    expect(redirectFor(AuthStatus.unlocked, '/customers'), isNull);
   });
 }
