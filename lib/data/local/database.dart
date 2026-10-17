@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:loan_management_app/core/constants/app_constants.dart';
+import 'package:loan_management_app/data/local/daos/profile_dao.dart';
 import 'package:loan_management_app/data/local/tables/customers_table.dart';
 import 'package:loan_management_app/data/local/tables/emis_table.dart';
 import 'package:loan_management_app/data/local/tables/lender_profile_table.dart';
@@ -17,6 +18,7 @@ part 'database.g.dart';
 /// `dart run build_runner build --delete-conflicting-outputs`.
 @DriftDatabase(
   tables: [Customers, Loans, Emis, LedgerEntries, LenderProfiles],
+  daos: [ProfileDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());

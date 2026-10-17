@@ -3,6 +3,7 @@ abstract final class StorageKeys {
   // Secure storage.
   static const String mpinHash = 'mpin_hash';
   static const String mpinSalt = 'mpin_salt';
+  static const String mpinLength = 'mpin_length';
   static const String failedAttempts = 'failed_attempts';
   static const String lockoutUntil = 'lockout_until';
 

@@ -8,6 +8,8 @@ import 'package:loan_management_app/presentation/screens/auth/set_mpin_screen.da
 import 'package:loan_management_app/presentation/screens/customers/customer_list_screen.dart';
 import 'package:loan_management_app/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:loan_management_app/presentation/screens/loans/loan_list_screen.dart';
+import 'package:loan_management_app/presentation/screens/settings/change_mpin_screen.dart';
+import 'package:loan_management_app/presentation/screens/settings/lender_profile_screen.dart';
 import 'package:loan_management_app/presentation/screens/settings/settings_screen.dart';
 import 'package:loan_management_app/presentation/screens/shell/main_shell.dart';
 import 'package:loan_management_app/presentation/screens/splash/splash_screen.dart';
@@ -41,13 +43,14 @@ String? redirectFor(AuthStatus status, String location) {
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRefresh();
-  ref.listen<AuthStatus>(authProvider, (_, _) => refresh.notify());
+  ref.listen<AsyncValue<AuthStatus>>(authProvider, (_, _) => refresh.notify());
 
   final router = GoRouter(
     initialLocation: RouteNames.splashPath,
     refreshListenable: refresh,
     redirect: (context, state) {
-      return redirectFor(ref.read(authProvider), state.matchedLocation);
+      final status = authStatusOf(ref.read(authProvider));
+      return redirectFor(status, state.matchedLocation);
     },
     routes: [
       GoRoute(
@@ -87,6 +90,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: RouteNames.settingsPath,
             name: RouteNames.settings,
             builder: (context, state) => const SettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'profile',
+                name: RouteNames.profile,
+                builder: (context, state) => const LenderProfileScreen(),
+              ),
+              GoRoute(
+                path: 'change-mpin',
+                name: RouteNames.changeMpin,
+                builder: (context, state) => const ChangeMpinScreen(),
+              ),
+            ],
           ),
         ],
       ),
