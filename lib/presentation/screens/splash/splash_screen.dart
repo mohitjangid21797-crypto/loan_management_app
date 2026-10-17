@@ -1,40 +1,28 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:loan_management_app/core/constants/app_constants.dart';
 import 'package:loan_management_app/core/extensions/context_extensions.dart';
 import 'package:loan_management_app/presentation/providers/auth_provider.dart';
+import 'package:loan_management_app/presentation/widgets/error_view.dart';
 
-class SplashScreen extends ConsumerStatefulWidget {
+/// Shown while the app reads whether an MPIN exists. The router moves on as
+/// soon as [authProvider] resolves; this screen only handles the failure case.
+class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
 
   @override
-  ConsumerState<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends ConsumerState<SplashScreen> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    // Phase 0 stub: go straight to the app. Phase 1 resolves the real state
-    // (needsSetup, locked or unlocked) from secure storage.
-    _timer = Timer(AppConstants.splashDuration, () {
-      ref.read(authProvider.notifier).setStatus(AuthStatus.unlocked);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final auth = ref.watch(authProvider);
+
+    if (auth.hasError) {
+      return Scaffold(
+        body: ErrorView(
+          message: l10n.errorDatabase,
+          onRetry: () => ref.invalidate(authProvider),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Center(
         child: Padding(

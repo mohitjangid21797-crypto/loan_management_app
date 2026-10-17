@@ -4,9 +4,7 @@
   "splashTagline": "Manage customers, loans and EMIs offline",
   "splashLoading": "Loading",
   "setMpinTitle": "Create your MPIN",
-  "setMpinPlaceholder": "MPIN setup will be available in the next phase.",
   "loginTitle": "Enter your MPIN",
-  "loginPlaceholder": "MPIN login will be available in the next phase.",
   "navDashboard": "Dashboard",
   "navCustomers": "Customers",
   "navLoans": "Loans",
@@ -33,5 +31,54 @@
   "settingsLanguage": "Language",
   "languageEnglish": "English",
   "languageHindi": "हिन्दी",
-  "languageTamil": "தமிழ்"
+  "languageTamil": "தமிழ்",
+  "validationMpinInvalid": "MPIN must be 4 or 6 digits.",
+  "mpinDigitsEntered": "{count} of {total} digits entered",
+  "mpinUseBiometric": "Unlock with biometrics",
+  "mpinBackspace": "Delete last digit",
+  "mpinMismatch": "The two MPINs did not match. Please start again.",
+  "mpinConfirmPrompt": "Enter the same MPIN again to confirm",
+  "mpinEnterPrompt": "Choose a 4 or 6 digit MPIN",
+  "mpinFourDigits": "4 digits",
+  "mpinSixDigits": "6 digits",
+  "biometricReason": "Confirm it's you to unlock Loan Manager",
+  "loginPrompt": "Enter your MPIN to unlock",
+  "mpinLockedOut": "Too many wrong attempts. Try again in {time}.",
+  "mpinWrong": "{remaining, plural, =1{Wrong MPIN. 1 attempt left.} other{Wrong MPIN. {remaining} attempts left.}}",
+  "mpinTooManyAttempts": "Too many wrong attempts. Please wait and try again.",
+  "mpinChanged": "MPIN changed.",
+  "changeMpinTitle": "Change MPIN",
+  "mpinCurrentPrompt": "Enter your current MPIN",
+  "profileTitle": "Lender profile",
+  "profileChangePhoto": "Change photo",
+  "profileNameLabel": "Name",
+  "profileSaved": "Profile saved.",
+  "settingsBiometric": "Biometric unlock",
+  "settingsBiometricHint": "Use fingerprint or face instead of the MPIN",
+  "biometricUnavailable": "No biometrics are set up on this device.",
+  "settingsLockNow": "Lock app now",
+  "@mpinDigitsEntered": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@mpinLockedOut": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@mpinWrong": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -16,6 +16,12 @@ abstract final class RouteNames {
   static const String loansPath = '/loans';
   static const String settingsPath = '/settings';
 
+  static const String profile = 'profile';
+  static const String changeMpin = 'change-mpin';
+
+  static const String profilePath = '/settings/profile';
+  static const String changeMpinPath = '/settings/change-mpin';
+
   /// Bottom-navigation tab paths, in display order.
   static const List<String> tabPaths = [
     dashboardPath,

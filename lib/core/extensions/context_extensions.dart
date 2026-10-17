@@ -28,6 +28,7 @@ extension ValidationErrorL10n on ValidationError {
       ValidationError.amountInvalid => l10n.validationAmountInvalid,
       ValidationError.rateInvalid => l10n.validationRateInvalid,
       ValidationError.tenureInvalid => l10n.validationTenureInvalid,
+      ValidationError.mpinInvalid => l10n.validationMpinInvalid,
     };
   }
 }
