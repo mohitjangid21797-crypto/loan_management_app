@@ -16,6 +16,21 @@ abstract final class RouteNames {
   static const String loansPath = '/loans';
   static const String settingsPath = '/settings';
 
+  static const String customerAdd = 'customer-add';
+  static const String customerDetail = 'customer-detail';
+  static const String customerEdit = 'customer-edit';
+
+  static const String customerAddPath = '/customers/add';
+
+  static String customerDetailPath(String id) => '/customers/$id';
+  static String customerEditPath(String id) => '/customers/$id/edit';
+
+  static const String profile = 'profile';
+  static const String changeMpin = 'change-mpin';
+
+  static const String profilePath = '/settings/profile';
+  static const String changeMpinPath = '/settings/change-mpin';
+
   /// Bottom-navigation tab paths, in display order.
   static const List<String> tabPaths = [
     dashboardPath,

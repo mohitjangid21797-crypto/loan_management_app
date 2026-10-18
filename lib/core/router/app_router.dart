@@ -5,9 +5,13 @@ import 'package:loan_management_app/core/router/route_names.dart';
 import 'package:loan_management_app/presentation/providers/auth_provider.dart';
 import 'package:loan_management_app/presentation/screens/auth/login_mpin_screen.dart';
 import 'package:loan_management_app/presentation/screens/auth/set_mpin_screen.dart';
+import 'package:loan_management_app/presentation/screens/customers/customer_detail_screen.dart';
+import 'package:loan_management_app/presentation/screens/customers/customer_form_screen.dart';
 import 'package:loan_management_app/presentation/screens/customers/customer_list_screen.dart';
 import 'package:loan_management_app/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:loan_management_app/presentation/screens/loans/loan_list_screen.dart';
+import 'package:loan_management_app/presentation/screens/settings/change_mpin_screen.dart';
+import 'package:loan_management_app/presentation/screens/settings/lender_profile_screen.dart';
 import 'package:loan_management_app/presentation/screens/settings/settings_screen.dart';
 import 'package:loan_management_app/presentation/screens/shell/main_shell.dart';
 import 'package:loan_management_app/presentation/screens/splash/splash_screen.dart';
@@ -41,13 +45,14 @@ String? redirectFor(AuthStatus status, String location) {
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRefresh();
-  ref.listen<AuthStatus>(authProvider, (_, _) => refresh.notify());
+  ref.listen<AsyncValue<AuthStatus>>(authProvider, (_, _) => refresh.notify());
 
   final router = GoRouter(
     initialLocation: RouteNames.splashPath,
     refreshListenable: refresh,
     redirect: (context, state) {
-      return redirectFor(ref.read(authProvider), state.matchedLocation);
+      final status = authStatusOf(ref.read(authProvider));
+      return redirectFor(status, state.matchedLocation);
     },
     routes: [
       GoRoute(
@@ -77,6 +82,30 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: RouteNames.customersPath,
             name: RouteNames.customers,
             builder: (context, state) => const CustomerListScreen(),
+            routes: [
+              // 'add' must come before ':id' so it is not read as an id.
+              GoRoute(
+                path: 'add',
+                name: RouteNames.customerAdd,
+                builder: (context, state) => const CustomerFormScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                name: RouteNames.customerDetail,
+                builder: (context, state) => CustomerDetailScreen(
+                  customerId: state.pathParameters['id']!,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: RouteNames.customerEdit,
+                    builder: (context, state) => CustomerFormScreen(
+                      customerId: state.pathParameters['id'],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.loansPath,
@@ -87,6 +116,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: RouteNames.settingsPath,
             name: RouteNames.settings,
             builder: (context, state) => const SettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'profile',
+                name: RouteNames.profile,
+                builder: (context, state) => const LenderProfileScreen(),
+              ),
+              GoRoute(
+                path: 'change-mpin',
+                name: RouteNames.changeMpin,
+                builder: (context, state) => const ChangeMpinScreen(),
+              ),
+            ],
           ),
         ],
       ),

@@ -55,6 +55,24 @@ void main() {
     });
   });
 
+  group('Validators.mpin', () {
+    test('accepts exactly 4 or 6 digits', () {
+      expect(Validators.mpin('1234'), isNull);
+      expect(Validators.mpin('123456'), isNull);
+      expect(Validators.mpin('0000'), isNull);
+    });
+
+    test('rejects other lengths, letters and blanks', () {
+      for (final bad in [null, '', '123', '12345', '1234567', 'abcd', '12 4']) {
+        expect(
+          Validators.mpin(bad),
+          ValidationError.mpinInvalid,
+          reason: '$bad',
+        );
+      }
+    });
+  });
+
   group('Validators.tenureMonths', () {
     test('accepts 1 to 600 inclusive', () {
       expect(Validators.tenureMonths(1), isNull);
