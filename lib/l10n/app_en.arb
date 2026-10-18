@@ -80,5 +80,30 @@
         "type": "int"
       }
     }
-  }
+  },
+  "customersEmpty": "No customers yet. Tap + to add one.",
+  "customersNoMatch": "No customers match your search.",
+  "customersSearchHint": "Search by name or mobile",
+  "customerAdd": "Add customer",
+  "customerAddTitle": "New customer",
+  "customerEditTitle": "Edit customer",
+  "customerDetailTitle": "Customer",
+  "customerEdit": "Edit",
+  "customerMenu": "More options",
+  "customerNameLabel": "Name",
+  "customerMobileLabel": "Mobile number",
+  "customerAddressLabel": "Address (optional)",
+  "customerNotesLabel": "Notes (optional)",
+  "customerSmsConsent": "Customer agrees to receive SMS",
+  "customerChangePhoto": "Choose photo",
+  "customerSaved": "Customer saved.",
+  "customerDeleted": "Customer deleted.",
+  "customerDeleteTitle": "Delete customer?",
+  "customerDeleteMessage": "This customer will be removed from your list. Their past records are kept.",
+  "customerCall": "Call",
+  "customerSms": "SMS",
+  "customerNotFound": "This customer no longer exists.",
+  "customerCannotLaunch": "Could not open the phone app.",
+  "errorDuplicateMobile": "Another customer already uses this mobile number.",
+  "errorActiveLoan": "This customer has an active loan and cannot be deleted."
 }

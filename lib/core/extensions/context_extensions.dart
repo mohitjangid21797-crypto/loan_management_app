@@ -39,6 +39,8 @@ extension FailureL10n on Failure {
       NetworkFailure() => l10n.errorNetwork,
       DatabaseFailure() => l10n.errorDatabase,
       NotFoundFailure() => l10n.errorNotFound,
+      DuplicateMobileFailure() => l10n.errorDuplicateMobile,
+      ActiveLoanFailure() => l10n.errorActiveLoan,
       ValidationFailure(:final error) => error.message(l10n),
       _ => l10n.errorGeneric,
     };

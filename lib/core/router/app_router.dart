@@ -5,6 +5,8 @@ import 'package:loan_management_app/core/router/route_names.dart';
 import 'package:loan_management_app/presentation/providers/auth_provider.dart';
 import 'package:loan_management_app/presentation/screens/auth/login_mpin_screen.dart';
 import 'package:loan_management_app/presentation/screens/auth/set_mpin_screen.dart';
+import 'package:loan_management_app/presentation/screens/customers/customer_detail_screen.dart';
+import 'package:loan_management_app/presentation/screens/customers/customer_form_screen.dart';
 import 'package:loan_management_app/presentation/screens/customers/customer_list_screen.dart';
 import 'package:loan_management_app/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:loan_management_app/presentation/screens/loans/loan_list_screen.dart';
@@ -80,6 +82,30 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: RouteNames.customersPath,
             name: RouteNames.customers,
             builder: (context, state) => const CustomerListScreen(),
+            routes: [
+              // 'add' must come before ':id' so it is not read as an id.
+              GoRoute(
+                path: 'add',
+                name: RouteNames.customerAdd,
+                builder: (context, state) => const CustomerFormScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                name: RouteNames.customerDetail,
+                builder: (context, state) => CustomerDetailScreen(
+                  customerId: state.pathParameters['id']!,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: RouteNames.customerEdit,
+                    builder: (context, state) => CustomerFormScreen(
+                      customerId: state.pathParameters['id'],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.loansPath,

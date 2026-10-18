@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:loan_management_app/core/extensions/context_extensions.dart';
 import 'package:loan_management_app/core/utils/validators.dart';
 import 'package:loan_management_app/presentation/providers/profile_provider.dart';
+import 'package:loan_management_app/presentation/widgets/photo_avatar.dart';
 
 /// Edit the lender's name and photo.
 class LenderProfileScreen extends ConsumerStatefulWidget {
@@ -78,8 +77,6 @@ class _LenderProfileScreenState extends ConsumerState<LenderProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final path = _photoPath;
-    final photo = path != null && File(path).existsSync() ? File(path) : null;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.profileTitle)),
       body: !_loaded
@@ -91,21 +88,11 @@ class _LenderProfileScreenState extends ConsumerState<LenderProfileScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      Semantics(
-                        button: true,
-                        label: l10n.profileChangePhoto,
-                        child: InkResponse(
-                          onTap: _pickPhoto,
-                          radius: 56,
-                          child: CircleAvatar(
-                            radius: 56,
-                            backgroundImage:
-                                photo == null ? null : FileImage(photo),
-                            child: photo == null
-                                ? const Icon(Icons.add_a_photo_outlined)
-                                : null,
-                          ),
-                        ),
+                      PhotoAvatar(
+                        path: _photoPath,
+                        placeholder: const Icon(Icons.add_a_photo_outlined),
+                        semanticLabel: l10n.profileChangePhoto,
+                        onTap: _pickPhoto,
                       ),
                       const SizedBox(height: 24),
                       TextFormField(
