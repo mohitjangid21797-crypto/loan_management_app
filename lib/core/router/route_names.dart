@@ -25,6 +25,19 @@ abstract final class RouteNames {
   static String customerDetailPath(String id) => '/customers/$id';
   static String customerEditPath(String id) => '/customers/$id/edit';
 
+  static const String loanAdd = 'loan-add';
+  static const String loanDetail = 'loan-detail';
+  static const String loanSchedule = 'loan-schedule';
+
+  static const String loanAddPath = '/loans/add';
+
+  /// The new-loan form with [customerId] already chosen.
+  static String loanAddPathFor(String customerId) =>
+      '/loans/add?customerId=$customerId';
+
+  static String loanDetailPath(String id) => '/loans/$id';
+  static String loanSchedulePath(String id) => '/loans/$id/schedule';
+
   static const String profile = 'profile';
   static const String changeMpin = 'change-mpin';
 

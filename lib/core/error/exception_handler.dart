@@ -26,6 +26,18 @@ final class ActiveLoanException extends AppException {
   const ActiveLoanException([super.message]);
 }
 
+final class OutOfOrderPaymentException extends AppException {
+  const OutOfOrderPaymentException([super.message]);
+}
+
+final class AlreadyPaidException extends AppException {
+  const AlreadyPaidException([super.message]);
+}
+
+final class LoanNotPaidException extends AppException {
+  const LoanNotPaidException([super.message]);
+}
+
 final class NetworkException extends AppException {
   const NetworkException([super.message]);
 }
@@ -44,6 +56,10 @@ abstract final class ExceptionHandler {
       DuplicateMobileException(:final message) =>
         DuplicateMobileFailure(message),
       ActiveLoanException(:final message) => ActiveLoanFailure(message),
+      OutOfOrderPaymentException(:final message) =>
+        OutOfOrderPaymentFailure(message),
+      AlreadyPaidException(:final message) => AlreadyPaidFailure(message),
+      LoanNotPaidException(:final message) => LoanNotPaidFailure(message),
       NetworkException(:final message) => NetworkFailure(message),
       CryptoException(:final message) =>
         WrongPasswordOrCorruptFailure(message),

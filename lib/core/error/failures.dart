@@ -35,6 +35,20 @@ final class ActiveLoanFailure extends Failure {
   const ActiveLoanFailure([super.debugMessage]);
 }
 
+/// An installment was paid while an earlier one is still unpaid.
+final class OutOfOrderPaymentFailure extends Failure {
+  const OutOfOrderPaymentFailure([super.debugMessage]);
+}
+
+final class AlreadyPaidFailure extends Failure {
+  const AlreadyPaidFailure([super.debugMessage]);
+}
+
+/// A loan cannot be closed while installments are unpaid.
+final class LoanNotPaidFailure extends Failure {
+  const LoanNotPaidFailure([super.debugMessage]);
+}
+
 final class ValidationFailure extends Failure {
   const ValidationFailure(this.error);
 

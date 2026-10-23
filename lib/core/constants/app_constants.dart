@@ -34,4 +34,10 @@ abstract final class AppConstants {
 
   /// Locale used when the device locale is not supported.
   static const Locale defaultLocale = Locale('en');
+
+  /// Symbol shown before amounts.
+  static const String currencySymbol = '₹';
+
+  /// Installments must be paid in order unless this is turned on.
+  static const bool allowOutOfOrderPayments = false;
 }

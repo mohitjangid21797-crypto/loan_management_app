@@ -6,3 +6,8 @@ extension PaiseX on int {
     return CurrencyFormatter.format(this, symbol: symbol);
   }
 }
+
+extension RateX on double {
+  /// A rate for display: `12` for 12.0, `10.5` for 10.5.
+  String get rateText => this == roundToDouble() ? toStringAsFixed(0) : '$this';
+}

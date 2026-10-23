@@ -9,6 +9,9 @@ import 'package:loan_management_app/presentation/screens/customers/customer_deta
 import 'package:loan_management_app/presentation/screens/customers/customer_form_screen.dart';
 import 'package:loan_management_app/presentation/screens/customers/customer_list_screen.dart';
 import 'package:loan_management_app/presentation/screens/dashboard/dashboard_screen.dart';
+import 'package:loan_management_app/presentation/screens/emi/emi_schedule_screen.dart';
+import 'package:loan_management_app/presentation/screens/loans/loan_detail_screen.dart';
+import 'package:loan_management_app/presentation/screens/loans/loan_form_screen.dart';
 import 'package:loan_management_app/presentation/screens/loans/loan_list_screen.dart';
 import 'package:loan_management_app/presentation/screens/settings/change_mpin_screen.dart';
 import 'package:loan_management_app/presentation/screens/settings/lender_profile_screen.dart';
@@ -111,6 +114,31 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: RouteNames.loansPath,
             name: RouteNames.loans,
             builder: (context, state) => const LoanListScreen(),
+            routes: [
+              // 'add' must come before ':id' so it is not read as an id.
+              GoRoute(
+                path: 'add',
+                name: RouteNames.loanAdd,
+                builder: (context, state) => LoanFormScreen(
+                  customerId: state.uri.queryParameters['customerId'],
+                ),
+              ),
+              GoRoute(
+                path: ':id',
+                name: RouteNames.loanDetail,
+                builder: (context, state) =>
+                    LoanDetailScreen(loanId: state.pathParameters['id']!),
+                routes: [
+                  GoRoute(
+                    path: 'schedule',
+                    name: RouteNames.loanSchedule,
+                    builder: (context, state) => EmiScheduleScreen(
+                      loanId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.settingsPath,

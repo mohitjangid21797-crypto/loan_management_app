@@ -5,6 +5,7 @@ import 'package:loan_management_app/core/extensions/context_extensions.dart';
 import 'package:loan_management_app/core/router/route_names.dart';
 import 'package:loan_management_app/domain/entities/customer.dart';
 import 'package:loan_management_app/presentation/providers/customer_provider.dart';
+import 'package:loan_management_app/presentation/widgets/customer_loans_section.dart';
 import 'package:loan_management_app/presentation/widgets/empty_state.dart';
 import 'package:loan_management_app/presentation/widgets/error_view.dart';
 import 'package:loan_management_app/presentation/widgets/photo_avatar.dart';
@@ -130,6 +131,8 @@ class _Details extends StatelessWidget {
             title: Text(l10n.customerNotesLabel),
             subtitle: Text(customer.notes),
           ),
+        const SizedBox(height: 16),
+        CustomerLoansSection(customerId: customer.id),
       ],
     );
   }
