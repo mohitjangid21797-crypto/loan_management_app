@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,51 +6,61 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/index.dart';
 import 'providers/app_provider.dart';
+import 'providers/app_locale_provider.dart';
 import 'screens/index.dart';
 import 'widgets/common_widgets.dart';
-import 'l10n/generated/app_localizations.dart';
+import 'widgets/localized_text.dart';
+import 'l10n/ui_translations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final appProvider = AppProvider();
   await appProvider.initialize();
-  runApp(LoanManagementApp(appProvider: appProvider));
+  await UiTranslations.load();
+  final localeProvider = AppLocaleProvider();
+  await localeProvider.loadSavedLocale();
+  runApp(
+    LoanManagementApp(
+      appProvider: appProvider,
+      localeProvider: localeProvider,
+    ),
+  );
 }
 
-class LoanManagementApp extends StatelessWidget {
+class LoanManagementApp extends StatefulWidget {
   final AppProvider? appProvider;
+  final AppLocaleProvider? localeProvider;
 
-  const LoanManagementApp({super.key, this.appProvider});
+  const LoanManagementApp({super.key, this.appProvider, this.localeProvider});
+
+  @override
+  State<LoanManagementApp> createState() => _LoanManagementAppState();
+}
+
+class _LoanManagementAppState extends State<LoanManagementApp> {
+  late final AppLocaleProvider _localeProvider =
+      widget.localeProvider ?? AppLocaleProvider();
 
   @override
   Widget build(BuildContext context) {
-    final provider = appProvider ?? AppProvider();
-    return ChangeNotifierProvider.value(
-      value: provider,
-      child: MaterialApp(
+    final provider = widget.appProvider ?? AppProvider();
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: provider),
+        ChangeNotifierProvider.value(value: _localeProvider),
+      ],
+      child: Consumer<AppLocaleProvider>(
+        builder: (context, localeProvider, _) => MaterialApp(
         title: 'Loan Management App',
         debugShowCheckedModeBanner: false,
         localizationsDelegates: const [
-          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales:  [
-          Locale('en'), // English
-          Locale('hi'), // Hindi
-          Locale('ta'), // Tamil
-          Locale('te'), // Telugu
-          Locale('bn'), // Bengali
-          Locale('mr'), // Marathi
-          Locale('gu'), // Gujarati
-          Locale('kn'), // Kannada
-          Locale('ml'), // Malayalam
-          Locale('pa'), // Punjabi
-          Locale('or'), // Odia
-          Locale('ur'), // Urdu
-          Locale('as'), // Assamese
-        ],
+        locale: localeProvider.locale,
+        supportedLocales: AppLocaleProvider.supportedLanguageCodes
+            .map((code) => Locale(code)),
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1E3A8A),
@@ -61,6 +71,7 @@ class LoanManagementApp extends StatelessWidget {
           scaffoldBackgroundColor: Colors.white,
         ),
         home: const SplashScreen(),
+      ),
       ),
     );
   }
@@ -133,11 +144,17 @@ class _SplashScreenState extends State<SplashScreen>
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360 || screenHeight < 640;
     
-    final double logoSize = isSmallScreen ? 90 : 120;
-    final double iconSize = isSmallScreen ? 45 : 60;
-    final double titleFontSize = isSmallScreen ? 26 : 32;
-    final double subtitleFontSize = isSmallScreen ? 14 : 16;
-    final double progressWidth = screenWidth * 0.7;
+    final double logoSize = (screenWidth * 0.28)
+        .clamp(72.0, isSmallScreen ? 96.0 : 120.0)
+        .toDouble();
+    final double iconSize = logoSize * 0.5;
+    final double titleFontSize = (screenWidth * 0.08)
+        .clamp(22.0, isSmallScreen ? 28.0 : 32.0)
+        .toDouble();
+    final double subtitleFontSize = (screenWidth * 0.04)
+        .clamp(12.0, 16.0)
+        .toDouble();
+    final double progressWidth = (screenWidth * 0.7).clamp(180.0, 360.0).toDouble();
 
     return Scaffold(
       body: Container(
@@ -317,6 +334,7 @@ Future.delayed(const Duration(milliseconds: 1500), () {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<AppLocaleProvider>();
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -328,7 +346,26 @@ Future.delayed(const Duration(milliseconds: 1500), () {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LanguageSelectionScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.language_rounded),
+                      label: Text(localizedUiText(context, 'Select Language')),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1E3A8A),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   Text(
                     'Welcome Back',
@@ -485,17 +522,17 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const CustomersListScreen(),
-    const LoansListScreen(),
-    const ProfileScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: switch (_currentIndex) {
+        0 => DashboardScreen(
+          onViewAllLoans: () => setState(() => _currentIndex = 2),
+        ),
+        1 => const CustomersListScreen(),
+        2 => const LoansListScreen(),
+        _ => const ProfileScreen(),
+      },
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
@@ -519,7 +556,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home_rounded, 'Home', 0),
+              _buildNavItem(Icons.home_rounded, 'Dashboard', 0),
               _buildNavItem(Icons.people_rounded, 'Customers', 1),
               _buildNavItem(Icons.credit_card_rounded, 'Loans', 2),
               _buildNavItem(Icons.person_rounded, 'Profile', 3),
@@ -547,7 +584,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              label,
+              localizedUiText(context, label),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
@@ -562,7 +601,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final VoidCallback onViewAllLoans;
+
+  const DashboardScreen({super.key, required this.onViewAllLoans});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -653,8 +694,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              runSpacing: 4,
                               children: [
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,8 +750,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        runSpacing: 4,
                         children: [
                           Text(
                             'Loan Overview',
@@ -720,7 +763,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
                           TextButton.icon(
-                            onPressed: () {},
+                            onPressed: widget.onViewAllLoans,
                             icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                             label: Text('View All', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                             style: TextButton.styleFrom(foregroundColor: const Color(0xFF1E3A8A)),
@@ -730,101 +773,155 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       const SizedBox(height: 16),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: StatCard(
-                              title: 'Total Loans',
-                              value: 'Rs.${_formatCurrency(totalLoanAmount)}',
-                              subtitle: 'Active: $activeLoans | Closed: $completedLoans',
-                              icon: Icons.account_balance_wallet_rounded,
-                              color: const Color(0xFF1E3A8A),
-                              delay: 0,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: StatCard(
-                              title: 'EMI Due',
-                              value: 'Rs.${_formatCurrency(totalEMIDue)}',
-                              subtitle: '${pendingEMIs.length} Pending${overdueEMIs.isNotEmpty ? ' \u2022 ${overdueEMIs.length} Overdue' : ''}',
-                              icon: Icons.calendar_today_rounded,
-                              color: overdueEMIs.isNotEmpty ? const Color(0xFFDC2626) : const Color(0xFFDC2626),
-                              delay: 100,
-                            ),
-                          ),
-                        ],
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final loansCard = StatCard(
+                            title: 'Total Loans',
+                            value: '₹${_formatCurrency(totalLoanAmount)}',
+                            subtitle:
+                                '${localizedUiText(context, 'Active')}: $activeLoans | ${localizedUiText(context, 'Completed')}: $completedLoans',
+                            icon: Icons.account_balance_wallet_rounded,
+                            color: const Color(0xFF1E3A8A),
+                            delay: 0,
+                          );
+                          final emiCard = StatCard(
+                            title: 'EMI Due',
+                            value: '₹${_formatCurrency(totalEMIDue)}',
+                            subtitle:
+                                '${pendingEMIs.length} ${localizedUiText(context, 'Pending')}${overdueEMIs.isNotEmpty ? ' • ${overdueEMIs.length} ${localizedUiText(context, 'Overdue')}' : ''}',
+                            icon: Icons.calendar_today_rounded,
+                            color: const Color(0xFFDC2626),
+                            delay: 100,
+                          );
+
+                          if (constraints.maxWidth < 480) {
+                            return Column(
+                              children: [
+                                loansCard,
+                                const SizedBox(height: 12),
+                                emiCard,
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: loansCard),
+                              const SizedBox(width: 16),
+                              Expanded(child: emiCard),
+                            ],
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 16),
 
-                      Row(
-                        children: [
-                          Expanded(
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final customersCard = StatCard(
+                            title: 'Total Customers',
+                            value: provider.customers.length.toString(),
+                            subtitle: 'Customers',
+                            icon: Icons.people_rounded,
+                            color: const Color(0xFF7C3AED),
+                            delay: 200,
+                          );
+                          final documentsCard = InkWell(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AllPDFsScreen(),
+                              ),
+                            ),
+                            borderRadius: BorderRadius.circular(20),
                             child: StatCard(
-                              title: 'Total Customers',
-                              value: provider.customers.length.toString(),
-                              subtitle: 'Registered',
-                              icon: Icons.people_rounded,
-                              color: const Color(0xFF7C3AED),
-                              delay: 200,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const AllPDFsScreen()),
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              child: StatCard(
-                                title: 'Documents',
-                                value: provider.documents.length.toString(),
-                                subtitle: 'Generated',
-                                icon: Icons.picture_as_pdf_rounded,
-                                color: const Color(0xFF059669),
-                                delay: 300,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppButton(
-                              text: 'Create Loan',
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const CreateLoanScreen()),
-                              ),
-                              backgroundColor: const Color(0xFF1E3A8A),
-                              icon: Icons.add_circle_rounded,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: AppButton(
-                              text: 'View All PDFs',
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const AllPDFsScreen()),
-                              ),
-                              backgroundColor: const Color(0xFF7C3AED),
+                              title: 'Documents',
+                              value: provider.documents.length.toString(),
+                              subtitle: 'Documents',
                               icon: Icons.picture_as_pdf_rounded,
+                              color: const Color(0xFF059669),
+                              delay: 300,
                             ),
-                          ),
-                        ],
+                          );
+
+                          if (constraints.maxWidth < 480) {
+                            return Column(
+                              children: [
+                                customersCard,
+                                const SizedBox(height: 12),
+                                documentsCard,
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: customersCard),
+                              const SizedBox(width: 16),
+                              Expanded(child: documentsCard),
+                            ],
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final createLoanButton = AppButton(
+                            text: 'Create Loan',
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CreateLoanScreen(),
+                              ),
+                            ),
+                            backgroundColor: const Color(0xFF1E3A8A),
+                            icon: Icons.add_circle_rounded,
+                          );
+                          final viewPdfsButton = AppButton(
+                            text: 'Documents',
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AllPDFsScreen(),
+                              ),
+                            ),
+                            backgroundColor: const Color(0xFF7C3AED),
+                            icon: Icons.picture_as_pdf_rounded,
+                          );
+
+                          if (constraints.maxWidth < 480) {
+                            return Column(
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: createLoanButton,
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: viewPdfsButton,
+                                ),
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: createLoanButton),
+                              const SizedBox(width: 12),
+                              Expanded(child: viewPdfsButton),
+                            ],
+                          );
+                        },
                       ).animate(controller: _staggerController).fadeIn(duration: 600.ms, delay: 400.ms).slideY(begin: 0.2),
 
                       const SizedBox(height: 32),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        runSpacing: 4,
                         children: [
                           Text(
                             'Recent Loans',
@@ -835,7 +932,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: widget.onViewAllLoans,
                             child: Text('View All', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF1E3A8A))),
                           ),
                         ],
@@ -846,11 +943,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                       if (provider.loans.isEmpty)
                         EmptyState(
                           icon: Icons.account_balance_wallet_outlined,
-                          title: 'No Loans Created Yet',
-                          subtitle: 'Create your first loan from the Loans tab',
+                          title: 'No Loans Yet',
+                          subtitle: 'Create your first loan to get started',
                           action: AppButton(
                             text: 'Create Loan',
-                            onPressed: () {},
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CreateLoanScreen(),
+                              ),
+                            ),
                             backgroundColor: const Color(0xFF1E3A8A),
                             width: 200,
                           ),
@@ -1064,7 +1166,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  loan.status.toUpperCase(),
+                  localizedUiText(
+                    context,
+                    loan.status == 'active' ? 'Active' : 'Completed',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -1077,20 +1184,37 @@ class _DashboardScreenState extends State<DashboardScreen>
 
           const SizedBox(height: 20),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildInfoItem('Loan Amount', 'Rs.${_formatCurrency(loan.principalAmount)}'),
-              ),
-              Container(height: 40, width: 1, color: Colors.grey[200]),
-              Expanded(
-                child: _buildInfoItem('Monthly EMI', 'Rs.${_formatCurrency(loan.monthlyEMI)}'),
-              ),
-              Container(height: 40, width: 1, color: Colors.grey[200]),
-              Expanded(
-                child: _buildInfoItem('Interest Rate', '${loan.interestRate}% ${loan.interestType.name}'),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = (constraints.maxWidth - 12) / 2;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildInfoItem(
+                      'Loan Amount',
+                      '₹${_formatCurrency(loan.principalAmount)}',
+                    ),
+                  ),
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildInfoItem(
+                      'Monthly EMI',
+                      '₹${_formatCurrency(loan.monthlyEMI)}',
+                    ),
+                  ),
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildInfoItem(
+                      'Interest Rate',
+                      '${loan.interestRate}% ${localizedUiText(context, loan.interestType == InterestType.simple ? 'Simple Interest' : 'Compound Interest')}',
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
 
           const SizedBox(height: 20),
@@ -1098,54 +1222,50 @@ class _DashboardScreenState extends State<DashboardScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Repayment Progress',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[700],
-                    ),
+              Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              runSpacing: 4,
+              children: [
+                Text(
+                  'Repayment Progress',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
                   ),
-                  Text(
-                    '${(progress * 100).toInt()}% completed',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
+                ),
+                Text(
+                  '${(progress * 100).toInt()}% ${localizedUiText(context, 'Completed')}',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color,
                   ),
-                ],
+                ),
+              ],
               ),
               const SizedBox(height: 8),
-              Stack(
-                children: [
-                  Container(
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 1500),
-                    curve: Curves.easeOutCubic,
-                    height: 8,
-                    width: MediaQuery.of(context).size.width * 0.75 * progress,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color, color.withValues(alpha: 0.7)],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  height: 8,
+                  color: Colors.grey[100],
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FractionallySizedBox(
+                    widthFactor: progress.clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [color, color.withValues(alpha: 0.7)],
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                '${loan.tenureMonths} months tenure \u2022 ${loan.interestType.name} interest',
+                '${loan.tenureMonths} ${localizedUiText(context, 'Months')} • ${localizedUiText(context, loan.interestType == InterestType.simple ? 'Simple Interest' : 'Compound Interest')}',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
@@ -1166,7 +1286,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            localizedUiText(context, label),
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w500,
@@ -1177,6 +1297,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 4),
           Text(
             value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,

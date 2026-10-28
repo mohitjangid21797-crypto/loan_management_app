@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,10 +8,12 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+
 import '../models/index.dart';
 import '../providers/app_provider.dart';
 import '../utils/pdf_generator.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/localized_text.dart';
 
 class AllPDFsScreen extends StatefulWidget {
   final String? loanId;
@@ -22,36 +25,12 @@ class AllPDFsScreen extends StatefulWidget {
 }
 
 class _AllPDFsScreenState extends State<AllPDFsScreen> {
-  List<LoanDocument> _documents = [];
   bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadDocuments();
-  }
-
-  void _loadDocuments() {
-    final provider = context.read<AppProvider>();
-    setState(() {
-      if (widget.loanId != null) {
-        _documents = provider.documents.where((d) => d.loanId == widget.loanId).toList();
-      } else {
-        _documents = List.from(provider.documents);
-      }
-      _documents.sort((a, b) => b.generatedAt.compareTo(a.generatedAt));
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Listen to provider changes
-    context.watch<AppProvider>();
-    _loadDocuments();
-  }
-
   Future<void> _generatePDF(LoanDocument document) async {
+    final languageCode = await _choosePDFLanguage();
+    if (languageCode == null || !mounted) return;
+
     setState(() => _isLoading = true);
 
     final provider = context.read<AppProvider>();
@@ -64,7 +43,10 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Missing data to generate PDF', style: GoogleFonts.inter()),
+            content: Text(
+              'Missing data to generate PDF',
+              style: GoogleFonts.inter(),
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -80,6 +62,7 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
         customer: customer,
         loan: loan,
         emis: emis,
+        languageCode: languageCode,
       );
 
       final output = await getTemporaryDirectory();
@@ -93,18 +76,75 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
         setState(() => _isLoading = false);
         _showPDFOptions(document, file, pdf);
       }
+
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error generating PDF: $e', style: GoogleFonts.inter()),
+            content: Text(
+              'Error generating PDF: $e',
+              style: GoogleFonts.inter(),
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     }
+  }
+
+  Future<String?> _choosePDFLanguage() {
+    final appLanguageCode = Localizations.localeOf(context).languageCode;
+    const languageNames = {
+      'en': 'English',
+      'as': 'Assamese',
+      'bn': 'Bengali',
+      'gu': 'Gujarati',
+      'hi': 'Hindi',
+      'kn': 'Kannada',
+      'ml': 'Malayalam',
+      'mr': 'Marathi',
+      'ne': 'Nepali',
+      'or': 'Odia',
+      'pa': 'Punjabi',
+      'ta': 'Tamil',
+      'te': 'Telugu',
+      'ur': 'Urdu',
+    };
+    final options = <String, String>{
+      'en': 'English',
+      'hi': 'Hindi',
+    };
+    if (appLanguageCode != 'en' && appLanguageCode != 'hi') {
+      options[appLanguageCode] =
+          'Use selected app language (${languageNames[appLanguageCode] ?? appLanguageCode})';
+    }
+
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Choose PDF language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.entries
+              .map(
+                (option) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(option.value),
+                  onTap: () => Navigator.pop(dialogContext, option.key),
+                ),
+              )
+              .toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPDFOptions(LoanDocument document, File file, pw.Document pdf) {
@@ -129,7 +169,11 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
             const SizedBox(height: 24),
             Text(
               'PDF Generated',
-              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)),
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1E3A8A),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -210,18 +254,23 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        constraints: const BoxConstraints(minHeight: 88),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.55), width: 1.5),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -239,7 +288,9 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
   }
 
   Future<void> _sharePDF(File file) async {
-    await Share.shareXFiles([XFile(file.path)], text: 'Loan Agreement Document');
+    await Share.shareXFiles([
+      XFile(file.path),
+    ], text: 'Loan Agreement Document');
   }
 
   Future<void> _deleteDocument(LoanDocument document) async {
@@ -248,17 +299,34 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete Document', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        content: Text('Are you sure you want to delete this PDF document?', style: GoogleFonts.inter()),
+        title: Text(
+          'Delete Document',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Are you sure you want to delete this PDF document?',
+          style: GoogleFonts.inter(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey[600])),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: Colors.grey[600]),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: Text('Delete', style: GoogleFonts.inter(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -266,7 +334,6 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
 
     if (confirmed == true) {
       await provider.deleteDocument(document.id);
-      _loadDocuments();
       if (mounted) {
         final scaffoldMessenger = ScaffoldMessenger.of(context);
         scaffoldMessenger.showSnackBar(
@@ -280,11 +347,13 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
     }
   }
 
-  Map<String, List<LoanDocument>> _groupDocumentsByCustomer() {
+  Map<String, List<LoanDocument>> _groupDocumentsByCustomer(
+    List<LoanDocument> documents,
+  ) {
     final provider = context.read<AppProvider>();
     final Map<String, List<LoanDocument>> grouped = {};
 
-    for (final document in _documents) {
+    for (final document in documents) {
       final customer = provider.getCustomerById(document.customerId);
       final key = customer?.mobileNumber ?? 'Unknown Customer';
       grouped.putIfAbsent(key, () => []).add(document);
@@ -308,15 +377,23 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
     return sortedMap;
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
-    final groupedDocuments = _groupDocumentsByCustomer();
+    final provider = context.watch<AppProvider>();
+    final documents = widget.loanId == null
+        ? List<LoanDocument>.from(provider.documents)
+        : provider.documents.where((d) => d.loanId == widget.loanId).toList();
+    documents.sort((a, b) => b.generatedAt.compareTo(a.generatedAt));
+    final groupedDocuments = _groupDocumentsByCustomer(documents);
     final hasLoanFilter = widget.loanId != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(hasLoanFilter ? 'Loan Documents' : 'All PDFs', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          hasLoanFilter ? 'Loan Documents' : 'All PDFs',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.white,
@@ -327,18 +404,26 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadDocuments,
+            onPressed: () => setState(() {}),
           ),
         ],
       ),
       body: SafeArea(
-        child: _buildBody(groupedDocuments, hasLoanFilter),
+        child: _buildBody(
+          groupedDocuments,
+          hasLoanFilter,
+          documents.isNotEmpty,
+        ),
       ),
     );
   }
 
-  Widget _buildBody(Map<String, List<LoanDocument>> groupedDocuments, bool hasLoanFilter) {
-    if (_documents.isEmpty) {
+  Widget _buildBody(
+    Map<String, List<LoanDocument>> groupedDocuments,
+    bool hasLoanFilter,
+    bool hasDocuments,
+  ) {
+    if (!hasDocuments) {
       return EmptyState(
         icon: Icons.picture_as_pdf_rounded,
         title: 'No Documents Found',
@@ -361,7 +446,10 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
     );
   }
 
-  List<Widget> _buildDocumentList(Map<String, List<LoanDocument>> groupedDocuments, bool hasLoanFilter) {
+  List<Widget> _buildDocumentList(
+    Map<String, List<LoanDocument>> groupedDocuments,
+    bool hasLoanFilter,
+  ) {
     final List<Widget> widgets = [];
     if (!hasLoanFilter) {
       widgets.add(
@@ -383,7 +471,7 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
     return widgets;
   }
 
-Widget _buildCustomerGroup(String customerKey, List<LoanDocument> docs) {
+  Widget _buildCustomerGroup(String customerKey, List<LoanDocument> docs) {
     final isUnknown = customerKey == 'Unknown Customer';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,7 +483,9 @@ Widget _buildCustomerGroup(String customerKey, List<LoanDocument> docs) {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isUnknown ? Colors.grey[200] : const Color(0xFF1E3A8A).withValues(alpha: 0.1),
+                  color: isUnknown
+                      ? Colors.grey[200]
+                      : const Color(0xFF1E3A8A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -418,21 +508,27 @@ Widget _buildCustomerGroup(String customerKey, List<LoanDocument> docs) {
                       ),
                     ),
                     Text(
-                      '${docs.length} document${docs.length > 1 ? 's' : ''}',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+                      '${docs.length} ${localizedUiText(context, 'Documents')}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ),
               ),
               if (!isUnknown) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF059669).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '${docs.length} document${docs.length > 1 ? 's' : ''}',
+                    '${docs.length} ${localizedUiText(context, 'Documents')}',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -457,101 +553,185 @@ Widget _buildCustomerGroup(String customerKey, List<LoanDocument> docs) {
     );
   }
 
-Widget _buildDocumentCard(LoanDocument document, Customer? customer, Loan? loan, int index) {
+  Widget _buildDocumentCard(
+    LoanDocument document,
+    Customer? customer,
+    Loan? loan,
+    int index,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey[100]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF1E3A8A), size: 24),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      document.fileName.replaceAll('.pdf', ''),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E3A8A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Customer: ${customer?.name ?? 'Unknown'} • ${_formatDate(document.generatedAt)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-              if (_isLoading)
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert_rounded, color: Colors.grey[500]),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onSelected: (value) => _handleMenuAction(value, document),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'view', child: Row(children: [Icon(Icons.visibility_rounded, size: 18), SizedBox(width: 8), Text('View PDF')])),
-                    const PopupMenuItem(value: 'share', child: Row(children: [Icon(Icons.share_rounded, size: 18), SizedBox(width: 8), Text('Share')])),
-                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('Regenerate')])),
-                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_rounded, size: 18, color: Colors.red), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.red))])),
-                  ],
-                ),
             ],
+            border: Border.all(color: Colors.grey[100]!),
           ),
-          if (loan != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Flexible(child: _buildInfoChip('Loan Amount', '₹${loan.principalAmount.toStringAsFixed(0)}', Icons.currency_rupee_rounded)),
-                  Container(height: 30, width: 1, color: Colors.grey[300]),
-                  Flexible(child: _buildInfoChip('EMIs', '${document.paidEMIs}/${document.totalEMIs} Paid', Icons.receipt_long_rounded)),
-                  Container(height: 30, width: 1, color: Colors.grey[300]),
-                  Flexible(child: _buildInfoChip('Total', '₹${document.totalAmount.toStringAsFixed(0)}', Icons.account_balance_wallet_rounded)),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: Color(0xFF1E3A8A),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          document.fileName.replaceAll('.pdf', ''),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1E3A8A),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${localizedUiText(context, 'Customer Details')}: ${customer?.name ?? localizedUiText(context, 'Unknown Customer')} • ${_formatDate(document.generatedAt)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_isLoading)
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        color: Colors.grey[500],
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      onSelected: (value) => _handleMenuAction(value, document),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'view',
+                          child: Row(
+                            children: [
+                              Icon(Icons.visibility_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Text('View PDF'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              Icon(Icons.share_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Text('Share'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Text('Regenerate'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_rounded,
+                                size: 18,
+                                color: Colors.red,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
-            )
-          ],
-        ],
-      ),
-    ).animate().fadeIn(duration: const Duration(milliseconds: 500), delay: Duration(milliseconds: 100 * index)).slideX(begin: 0.2);
+              if (loan != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: _buildInfoChip(
+                          'Loan Amount',
+                          '₹${loan.principalAmount.toStringAsFixed(0)}',
+                          Icons.currency_rupee_rounded,
+                        ),
+                      ),
+                      Container(height: 30, width: 1, color: Colors.grey[300]),
+                      Flexible(
+                        child: _buildInfoChip(
+                          'EMIs',
+                          '${document.paidEMIs}/${document.totalEMIs} ${localizedUiText(context, 'Paid')}',
+                          Icons.receipt_long_rounded,
+                        ),
+                      ),
+                      Container(height: 30, width: 1, color: Colors.grey[300]),
+                      Flexible(
+                        child: _buildInfoChip(
+                          'Total',
+                          '₹${document.totalAmount.toStringAsFixed(0)}',
+                          Icons.account_balance_wallet_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        )
+        .animate()
+        .fadeIn(
+          duration: const Duration(milliseconds: 500),
+          delay: Duration(milliseconds: 100 * index),
+        )
+        .slideX(begin: 0.2);
   }
 
   Widget _buildInfoChip(String label, String value, IconData icon) {
@@ -570,7 +750,11 @@ Widget _buildDocumentCard(LoanDocument document, Customer? customer, Loan? loan,
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E3A8A)),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF1E3A8A),
+          ),
         ),
       ],
     );
@@ -599,7 +783,9 @@ Widget _buildDocumentCard(LoanDocument document, Customer? customer, Loan? loan,
 
   Future<void> _viewDocument(LoanDocument document) async {
     if (document.filePath.isNotEmpty) {
-      await Printing.layoutPdf(onLayout: (_) async => File(document.filePath).readAsBytes());
+      await Printing.layoutPdf(
+        onLayout: (_) async => File(document.filePath).readAsBytes(),
+      );
     } else {
       _generatePDF(document);
     }
@@ -607,7 +793,9 @@ Widget _buildDocumentCard(LoanDocument document, Customer? customer, Loan? loan,
 
   Future<void> _shareDocument(LoanDocument document) async {
     if (document.filePath.isNotEmpty) {
-      await Share.shareXFiles([XFile(document.filePath)], text: 'Loan Agreement Document');
+      await Share.shareXFiles([
+        XFile(document.filePath),
+      ], text: 'Loan Agreement Document');
     } else {
       _generatePDF(document);
     }

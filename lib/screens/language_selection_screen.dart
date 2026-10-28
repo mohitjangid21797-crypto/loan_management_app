@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_locale_provider.dart';
 import '../utils/spacing.dart';
+import '../widgets/localized_text.dart';
 
 class LanguageSelectionScreen extends StatefulWidget {
   const LanguageSelectionScreen({super.key});
@@ -11,45 +13,26 @@ class LanguageSelectionScreen extends StatefulWidget {
 }
 
 class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
-  String _selectedLanguageCode = 'en';
-  static const String _prefKey = 'selected_language';
-
   static const Map<String, Map<String, String>> _languages = {
     'en': {'name': 'English', 'native': 'English', 'flag': '🇺🇸'},
-    'hi': {'name': 'Hindi', 'native': 'हिन्दी', 'flag': '🇮🇳'},
-    'ta': {'name': 'Tamil', 'native': 'தமிழ்', 'flag': '🇮🇳'},
-    'te': {'name': 'Telugu', 'native': 'తెలుగు', 'flag': '🇮🇳'},
+    'as': {'name': 'Assamese', 'native': 'অসমীয়া', 'flag': '🇮🇳'},
     'bn': {'name': 'Bengali', 'native': 'বাংলা', 'flag': '🇧🇩'},
-    'mr': {'name': 'Marathi', 'native': 'मराठी', 'flag': '🇮🇳'},
     'gu': {'name': 'Gujarati', 'native': 'ગુજરાતી', 'flag': '🇮🇳'},
+    'hi': {'name': 'Hindi', 'native': 'हिन्दी', 'flag': '🇮🇳'},
     'kn': {'name': 'Kannada', 'native': 'ಕನ್ನಡ', 'flag': '🇮🇳'},
     'ml': {'name': 'Malayalam', 'native': 'മലയാളം', 'flag': '🇮🇳'},
-    'pa': {'name': 'Punjabi', 'native': 'ਪੰਜਾਬੀ', 'flag': '🇮🇳'},
+    'mr': {'name': 'Marathi', 'native': 'मराठी', 'flag': '🇮🇳'},
+    'ne': {'name': 'Nepali', 'native': 'नेपाली', 'flag': '🇳🇵'},
     'or': {'name': 'Odia', 'native': 'ଓଡ଼ିଆ', 'flag': '🇮🇳'},
+    'pa': {'name': 'Punjabi', 'native': 'ਪੰਜਾਬੀ', 'flag': '🇮🇳'},
+    'ta': {'name': 'Tamil', 'native': 'தமிழ்', 'flag': '🇮🇳'},
+    'te': {'name': 'Telugu', 'native': 'తెలుగు', 'flag': '🇮🇳'},
     'ur': {'name': 'Urdu', 'native': 'اردو', 'flag': '🇵🇰'},
-    'as': {'name': 'Assamese', 'native': 'অসমীয়া', 'flag': '🇮🇳'},
   };
 
   @override
-  void initState() {
-    super.initState();
-    _loadSelectedLanguage();
-  }
-
-  Future<void> _loadSelectedLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _selectedLanguageCode = prefs.getString(_prefKey) ?? 'en';
-    });
-  }
-
-  Future<void> _saveLanguage(String code) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey, code);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final localeProvider = context.watch<AppLocaleProvider>();
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -71,15 +54,14 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
             final entry = _languages.entries.elementAt(index);
             final code = entry.key;
             final data = entry.value;
-            final isSelected = _selectedLanguageCode == code;
+            final isSelected = localeProvider.locale.languageCode == code;
 
             return Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: () async {
                   final navigator = Navigator.of(context);
-                  setState(() => _selectedLanguageCode = code);
-                  await _saveLanguage(code);
+                  await context.read<AppLocaleProvider>().setLanguage(code);
                   if (mounted) {
                     navigator.pop(code);
                   }

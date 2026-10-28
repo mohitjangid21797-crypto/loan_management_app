@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/index.dart';
 import '../providers/app_provider.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/localized_text.dart';
 import 'add_customer_screen.dart';
 import 'create_loan_screen.dart';
 
@@ -70,7 +71,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                 autofocus: true,
                 style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF1E3A8A)),
                 decoration: InputDecoration(
-                  hintText: 'Search customers...',
+                  hintText: localizedUiText(context, 'Search customers...'),
                   hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
                   border: InputBorder.none,
                 ),
@@ -135,6 +136,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                           MaterialPageRoute(builder: (_) => const AddCustomerScreen()),
                         ).then((_) => _loadCustomers()),
                         backgroundColor: const Color(0xFF1E3A8A),
+                        foregroundColor: Colors.white,
                         width: 200,
                       ),
                     )
@@ -158,8 +160,9 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                 MaterialPageRoute(builder: (_) => const AddCustomerScreen()),
               ).then((_) => _loadCustomers()),
               icon: const Icon(Icons.person_add_rounded),
-              label: Text('Add Customer', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text('Add Customer', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
               backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ).animate().scale(duration: 600.ms, delay: 800.ms, curve: Curves.elasticOut)
           : null,
@@ -186,93 +189,200 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
         ],
         border: Border.all(color: Colors.grey[100]!),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)]),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Text(
-                customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?',
-                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  customer.name,
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1E3A8A)),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  customer.mobileNumber,
-                  style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  customer.email,
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: activeLoans.isNotEmpty ? const Color(0xFF059669).withValues(alpha: 0.1) : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
                   ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
                   child: Text(
-                    activeLoans.isNotEmpty ? '${activeLoans.length} Active' : 'No Loans',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    customer.name.isNotEmpty
+                        ? customer.name[0].toUpperCase()
+                        : '?',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: activeLoans.isNotEmpty ? const Color(0xFF059669) : Colors.grey[600],
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: Text(
-                  '₹${totalLoanAmount.toStringAsFixed(0)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        customer.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1E3A8A),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        customer.mobileNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          height: 1.2,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        customer.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          height: 1.2,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Text(
-                'Total Loans',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[500]),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+                icon: Icon(Icons.more_vert_rounded, color: Colors.grey[500]),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onSelected: (value) => _handleMenuAction(value, customer),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'view',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('View Details'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'loan',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add_circle_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Create Loan'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_rounded, size: 18, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert_rounded, color: Colors.grey[500]),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            onSelected: (value) => _handleMenuAction(value, customer),
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'view', child: Row(children: [Icon(Icons.visibility_rounded, size: 18), SizedBox(width: 8), Text('View Details')])),
-              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('Edit')])),
-              const PopupMenuItem(value: 'loan', child: Row(children: [Icon(Icons.add_circle_rounded, size: 18), SizedBox(width: 8), Text('Create Loan')])),
-              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_rounded, size: 18, color: Colors.red), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.red))])),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: activeLoans.isNotEmpty
+                          ? const Color(0xFF059669).withValues(alpha: 0.1)
+                          : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      activeLoans.isNotEmpty
+                          ? '${activeLoans.length} ${localizedUiText(context, 'Active')}'
+                          : localizedUiText(context, 'No Loans Yet'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: activeLoans.isNotEmpty
+                            ? const Color(0xFF059669)
+                            : Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '₹${totalLoanAmount.toStringAsFixed(0)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E3A8A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Total Loans',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        height: 1.2,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -359,12 +469,12 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
               Text('Location', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[600])),
               Text(customer.location, style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF1E3A8A))),
               const SizedBox(height: 24),
-              Text('Loans (${loans.length})', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A))),
+              Text('${localizedUiText(context, 'Loans')} (${loans.length})', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A))),
               const SizedBox(height: 12),
               Expanded(
                 child: loans.isEmpty
                     ? Center(
-                        child: Text('No loans yet', style: GoogleFonts.inter(color: Colors.grey[500])),
+                        child: Text('No Loans Yet', style: GoogleFonts.inter(color: Colors.grey[500])),
                       )
                     : ListView.separated(
                         controller: scrollController,
@@ -400,7 +510,12 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        loan.status.toUpperCase(),
+                                        localizedUiText(
+                                          context,
+                                          loan.status == 'active'
+                                              ? 'Active'
+                                              : 'Completed',
+                                        ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: loan.status == 'active' ? const Color(0xFF059669) : Colors.grey[600]),
@@ -410,7 +525,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${loan.interestRate}% • ${loan.tenureMonths} months • ${loan.interestType.name}',
+                                  '${loan.interestRate}% • ${loan.tenureMonths} ${localizedUiText(context, 'Months')} • ${localizedUiText(context, loan.interestType.name == 'simple' ? 'Simple Interest' : 'Compound Interest')}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
@@ -421,7 +536,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                                   children: [
                                     Flexible(
                                       child: Text(
-                                        'EMI: ₹${loan.monthlyEMI.toStringAsFixed(2)}',
+                                        '${localizedUiText(context, 'Monthly EMI')}: ₹${loan.monthlyEMI.toStringAsFixed(2)}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF1E3A8A)),
@@ -429,7 +544,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                                     ),
                                     Flexible(
                                       child: Text(
-                                        'Total: ₹${loan.totalAmount.toStringAsFixed(2)}',
+                                        '${localizedUiText(context, 'Total Amount')}: ₹${loan.totalAmount.toStringAsFixed(2)}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600]),
@@ -456,7 +571,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Delete Customer', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        content: Text('Delete ${customer.name}? This will remove all associated loans and EMIs.', style: GoogleFonts.inter()),
+        content: Text('Are you sure you want to delete this customer? This will also delete all associated loans and EMIs.', style: GoogleFonts.inter()),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey[600]))),
           ElevatedButton(

@@ -127,9 +127,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get customerUpdated => 'ग्राहक सफलतापूर्वक अपडेट किया गया!';
 
   @override
-  String get customerDeleted => 'ग्राहक सफलतापूर्वक हटाया गया!';
-
-  @override
   String get confirmDeleteCustomer =>
       'क्या आप वाकई इस ग्राहक को हटाना चाहते हैं? इससे संबंधित सभी ऋण और ईएमआई भी हट जाएंगे।';
 
@@ -304,7 +301,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get progress => 'प्रगति';
 
   @override
-  String get paid => 'भुगतान किया';
+  String get paid => 'भुगतान किया गया';
 
   @override
   String get pending => 'लंबित';
@@ -391,10 +388,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get emiPending => 'लंबित';
 
   @override
-  String get emiPaid => 'भुगतान किया';
+  String get emiPaid => 'भुगतान किया गया';
 
   @override
-  String get installment => 'किस्त #';
+  String get installment => 'किस्त क्रमांक';
 
   @override
   String get emiAmount => 'ईएमआई राशि';
@@ -406,7 +403,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get paidDate => 'भुगतान तिथि';
 
   @override
-  String get emiSchedule => 'ईएमआई अनुसूची';
+  String get emiSchedule => 'ईएमआई भुगतान अनुसूची';
 
   @override
   String get loanOverview => 'ऋण अवलोकन';
@@ -674,6 +671,98 @@ class AppLocalizationsHi extends AppLocalizations {
   String get pdfOptions => 'पीडीएफ विकल्प';
 
   @override
+  String get choosePdfLanguage => 'PDF की भाषा चुनें';
+
+  @override
+  String selectedPdfLanguage(Object languageName) {
+    return 'चयनित ऐप भाषा का उपयोग करें ($languageName)';
+  }
+
+  @override
+  String get pdfSystemHeading => 'ऋण प्रबंधन प्रणाली';
+
+  @override
+  String get pdfAgreementSubtitle => 'ऋण समझौता और भुगतान सारांश';
+
+  @override
+  String get monthsCount => 'महीने';
+
+  @override
+  String get smartFinancialSolutions => 'स्मार्ट वित्तीय समाधान';
+
+  @override
+  String get backupYourData => 'अपने डेटा का बैकअप लें';
+
+  @override
+  String get backupYourDataDescription =>
+      'Google Drive पर बैकअप लेकर अपने ऋण डेटा को सुरक्षित रखें। ऐप को फिर से इंस्टॉल करने के बाद भी आप इसे कभी भी पुनर्स्थापित कर सकते हैं।';
+
+  @override
+  String get profileUpdated => 'प्रोफ़ाइल सफलतापूर्वक अपडेट की गई!';
+
+  @override
+  String get lenderDetails => 'ऋणदाता का विवरण';
+
+  @override
+  String get missingPdfData => 'PDF बनाने के लिए आवश्यक डेटा उपलब्ध नहीं है';
+
+  @override
+  String get deleteDocumentTitle => 'दस्तावेज़ हटाएं';
+
+  @override
+  String get confirmDeletePdf =>
+      'क्या आप वाकई इस PDF दस्तावेज़ को हटाना चाहते हैं?';
+
+  @override
+  String get documentDeleted => 'दस्तावेज़ हटा दिया गया';
+
+  @override
+  String get groupedByCustomer => 'ग्राहक के अनुसार समूहित';
+
+  @override
+  String get noCustomerForMobile =>
+      'इस मोबाइल नंबर से कोई ग्राहक पंजीकृत नहीं है।\nकृपया पहले ग्राहक जोड़ें।';
+
+  @override
+  String get customerDeleted => 'ग्राहक सफलतापूर्वक हटाया गया!';
+
+  @override
+  String get confirmPayment => 'भुगतान की पुष्टि करें';
+
+  @override
+  String get amountColon => 'राशि:';
+
+  @override
+  String get dueDateColon => 'देय तिथि:';
+
+  @override
+  String get totalAmountColon => 'कुल राशि:';
+
+  @override
+  String get payAll => 'सभी का भुगतान करें';
+
+  @override
+  String get backupPasswordPrompt =>
+      'बैकअप बनाते समय इस्तेमाल किया गया पासवर्ड दर्ज करें।';
+
+  @override
+  String get restoreEncryptedBackup =>
+      'एन्क्रिप्टेड बैकअप से पुनर्स्थापित करें';
+
+  @override
+  String get restoreGoogleAccountInstruction =>
+      'उसी Google खाते से साइन इन करें। आपको बैकअप के समय सेट किया गया पासवर्ड चाहिए होगा। पुनर्स्थापना के बाद नया M-PIN सेट करना आवश्यक है (सुरक्षा के लिए M-PIN बैकअप में संग्रहीत नहीं होता)।';
+
+  @override
+  String get appLanguage => 'ऐप की भाषा';
+
+  @override
+  String get choosePreferredLanguage => 'अपनी पसंदीदा भाषा चुनें';
+
+  @override
+  String get customerDeletedToast => 'ग्राहक हटा दिया गया';
+
+  @override
   String get documents => 'दस्तावेज़';
 
   @override
@@ -757,10 +846,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get totalLoan => 'कुल ऋण';
 
   @override
-  String get emiScheduleTitle => 'ईएमआई अनुसूची';
+  String get emiScheduleTitle => 'ईएमआई भुगतान अनुसूची';
 
   @override
-  String get installmentHeader => 'किस्त #';
+  String get installmentHeader => 'किस्त क्रमांक';
 
   @override
   String get dueDateHeader => 'देय तिथि';
@@ -778,7 +867,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get loanAgreementTitle => 'ऋण समझौता';
 
   @override
-  String get partiesTitle => 'समझौते के पक्ष';
+  String get partiesTitle => 'समझौते के पक्षकार';
 
   @override
   String get lenderLabel => 'ऋणदाता';
@@ -805,16 +894,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get loanDetailsTitle => 'ऋण विवरण';
 
   @override
-  String get principalAmountLabel => 'मूल राशि';
+  String get principalAmountLabel => 'मूल ऋण राशि';
 
   @override
   String get interestRateLabelFull => 'ब्याज दर';
 
   @override
-  String get tenureLabelFull => 'अवधि';
+  String get tenureLabelFull => 'ऋण की अवधि';
 
   @override
-  String get interestTypeLabel => 'ब्याज प्रकार';
+  String get interestTypeLabel => 'ब्याज का प्रकार';
 
   @override
   String get startDateLabel => 'प्रारंभ तिथि';
@@ -826,10 +915,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get totalInterestLabel => 'कुल ब्याज';
 
   @override
-  String get totalPayableLabel => 'कुल देय';
+  String get totalPayableLabel => 'कुल देय राशि';
 
   @override
-  String get loanStatusLabel => 'ऋण स्थिति';
+  String get loanStatusLabel => 'ऋण की स्थिति';
 
   @override
   String get loanIdLabel => 'ऋण आईडी';
@@ -872,7 +961,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get footerText =>
-      'यह दस्तावेज़ कंप्यूटर-जनरेटेड है और सत्यापन के लिए भौतिक हस्ताक्षर की आवश्यकता नहीं है।';
+      'यह दस्तावेज़ कंप्यूटर द्वारा तैयार किया गया है। इसकी पुष्टि के लिए भौतिक हस्ताक्षर की आवश्यकता नहीं है।';
 
   @override
   String get confidentialLabel => 'ऋण प्रबंधन प्रणाली | गोपनीय दस्तावेज़';

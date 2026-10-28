@@ -5,8 +5,20 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_as.dart';
+import 'app_localizations_bn.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_gu.dart';
 import 'app_localizations_hi.dart';
+import 'app_localizations_kn.dart';
+import 'app_localizations_ml.dart';
+import 'app_localizations_mr.dart';
+import 'app_localizations_ne.dart';
+import 'app_localizations_or.dart';
+import 'app_localizations_pa.dart';
+import 'app_localizations_ta.dart';
+import 'app_localizations_te.dart';
+import 'app_localizations_ur.dart';
 
 // ignore_for_file: type=lint
 
@@ -94,8 +106,20 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('as'),
+    Locale('bn'),
     Locale('en'),
+    Locale('gu'),
     Locale('hi'),
+    Locale('kn'),
+    Locale('ml'),
+    Locale('mr'),
+    Locale('ne'),
+    Locale('or'),
+    Locale('pa'),
+    Locale('ta'),
+    Locale('te'),
+    Locale('ur'),
   ];
 
   /// No description provided for @appTitle.
@@ -325,12 +349,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Customer updated successfully!'**
   String get customerUpdated;
-
-  /// No description provided for @customerDeleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Customer deleted successfully!'**
-  String get customerDeleted;
 
   /// No description provided for @confirmDeleteCustomer.
   ///
@@ -1375,6 +1393,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'PDF Options'**
   String get pdfOptions;
+
+  /// No description provided for @choosePdfLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose PDF language'**
+  String get choosePdfLanguage;
+
+  /// No description provided for @selectedPdfLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Use selected app language ({languageName})'**
+  String selectedPdfLanguage(Object languageName);
+
+  /// No description provided for @pdfSystemHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'LOAN MANAGEMENT SYSTEM'**
+  String get pdfSystemHeading;
+
+  /// No description provided for @pdfAgreementSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Loan Agreement & Payment Summary'**
+  String get pdfAgreementSubtitle;
+
+  /// No description provided for @monthsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Months'**
+  String get monthsCount;
+
+  /// No description provided for @smartFinancialSolutions.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Financial Solutions'**
+  String get smartFinancialSolutions;
+
+  /// No description provided for @backupYourData.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Your Data'**
+  String get backupYourData;
+
+  /// No description provided for @backupYourDataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure your loan data by backing it up to Google Drive. You can restore it anytime, even after reinstalling the app.'**
+  String get backupYourDataDescription;
+
+  /// No description provided for @profileUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile updated successfully!'**
+  String get profileUpdated;
+
+  /// No description provided for @lenderDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Lender Details'**
+  String get lenderDetails;
+
+  /// No description provided for @missingPdfData.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing data to generate PDF'**
+  String get missingPdfData;
+
+  /// No description provided for @deleteDocumentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Document'**
+  String get deleteDocumentTitle;
+
+  /// No description provided for @confirmDeletePdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this PDF document?'**
+  String get confirmDeletePdf;
+
+  /// No description provided for @documentDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Document deleted'**
+  String get documentDeleted;
+
+  /// No description provided for @groupedByCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Grouped by Customer'**
+  String get groupedByCustomer;
+
+  /// No description provided for @noCustomerForMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'No customer registered with this mobile number.\nPlease add the customer first.'**
+  String get noCustomerForMobile;
+
+  /// No description provided for @customerDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer deleted successfully!'**
+  String get customerDeleted;
+
+  /// No description provided for @confirmPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Payment'**
+  String get confirmPayment;
+
+  /// No description provided for @amountColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount:'**
+  String get amountColon;
+
+  /// No description provided for @dueDateColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Due Date:'**
+  String get dueDateColon;
+
+  /// No description provided for @totalAmountColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Amount:'**
+  String get totalAmountColon;
+
+  /// No description provided for @payAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay All'**
+  String get payAll;
+
+  /// No description provided for @backupPasswordPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the password you used when creating this backup.'**
+  String get backupPasswordPrompt;
+
+  /// No description provided for @restoreEncryptedBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from Encrypted Backup'**
+  String get restoreEncryptedBackup;
+
+  /// No description provided for @restoreGoogleAccountInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with the same Google account. You will need the backup password you set during backup. After restore, you must set a new M-PIN (M-PIN is not stored in backups for security).'**
+  String get restoreGoogleAccountInstruction;
+
+  /// No description provided for @appLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'App Language'**
+  String get appLanguage;
+
+  /// No description provided for @choosePreferredLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your preferred language'**
+  String get choosePreferredLanguage;
+
+  /// No description provided for @customerDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer deleted'**
+  String get customerDeletedToast;
 
   /// No description provided for @documents.
   ///
@@ -3403,8 +3589,22 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'hi'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'as',
+    'bn',
+    'en',
+    'gu',
+    'hi',
+    'kn',
+    'ml',
+    'mr',
+    'ne',
+    'or',
+    'pa',
+    'ta',
+    'te',
+    'ur',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -3413,10 +3613,34 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'as':
+      return AppLocalizationsAs();
+    case 'bn':
+      return AppLocalizationsBn();
     case 'en':
       return AppLocalizationsEn();
+    case 'gu':
+      return AppLocalizationsGu();
     case 'hi':
       return AppLocalizationsHi();
+    case 'kn':
+      return AppLocalizationsKn();
+    case 'ml':
+      return AppLocalizationsMl();
+    case 'mr':
+      return AppLocalizationsMr();
+    case 'ne':
+      return AppLocalizationsNe();
+    case 'or':
+      return AppLocalizationsOr();
+    case 'pa':
+      return AppLocalizationsPa();
+    case 'ta':
+      return AppLocalizationsTa();
+    case 'te':
+      return AppLocalizationsTe();
+    case 'ur':
+      return AppLocalizationsUr();
   }
 
   throw FlutterError(

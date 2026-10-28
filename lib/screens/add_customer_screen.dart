@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../models/index.dart';
 import '../providers/app_provider.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/localized_text.dart';
 
 class AddCustomerScreen extends StatefulWidget {
   final Customer? customer;
@@ -69,12 +71,16 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.customer == null ? 'Customer added successfully!' : 'Customer updated successfully!',
+            widget.customer == null
+                ? 'Customer added successfully!'
+                : 'Customer updated successfully!',
             style: GoogleFonts.inter(),
           ),
           backgroundColor: const Color(0xFF059669),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -126,7 +132,9 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
-                            isEditing ? Icons.edit_rounded : Icons.person_add_rounded,
+                            isEditing
+                                ? Icons.edit_rounded
+                                : Icons.person_add_rounded,
                             color: Colors.white,
                             size: 28,
                           ),
@@ -137,7 +145,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isEditing ? 'Update Customer Details' : 'Add New Customer',
+                                isEditing ? 'Edit Customer' : 'Add New Customer',
                                 style: GoogleFonts.inter(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700,
@@ -146,8 +154,8 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                               ),
                               Text(
                                 isEditing
-                                    ? 'Modify the customer information below'
-                                    : 'Fill in the details to register a new customer',
+                                    ? 'Customer Details'
+                                    : 'Add your first customer to get started',
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
                                   color: Colors.white.withValues(alpha: 0.9),
@@ -212,7 +220,8 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter email address';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value)) {
                         return 'Enter a valid email address';
                       }
                       return null;
@@ -239,11 +248,17 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                   const SizedBox(height: 32),
 
                   AppButton(
-                    text: isEditing ? 'Update Customer' : 'Add Customer',
-                    onPressed: _isLoading ? null : _saveCustomer,
-                    isLoading: _isLoading,
-                    icon: isEditing ? Icons.save_rounded : Icons.person_add_rounded,
-                  ).animate().fadeIn(duration: 600.ms, delay: 500.ms).slideY(begin: 0.3),
+                        text: isEditing ? 'Update Customer' : 'Add Customer',
+                        onPressed: _isLoading ? null : _saveCustomer,
+                        isLoading: _isLoading,
+                        icon: isEditing
+                            ? Icons.save_rounded
+                            : Icons.person_add_rounded,
+                        foregroundColor: Colors.white,
+                      )
+                      .animate()
+                      .fadeIn(duration: 600.ms, delay: 500.ms)
+                      .slideY(begin: 0.3),
 
                   if (isEditing) ...[
                     const SizedBox(height: 16),
@@ -252,8 +267,14 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                       child: OutlinedButton.icon(
                         onPressed: _isLoading
                             ? null
-                            : () => _showDeleteConfirmation(context, context.read<AppProvider>()),
-                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                            : () => _showDeleteConfirmation(
+                                context,
+                                context.read<AppProvider>(),
+                              ),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.red,
+                        ),
                         label: Text(
                           'Delete Customer',
                           style: GoogleFonts.inter(
@@ -286,7 +307,10 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete Customer', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        title: Text(
+          'Delete Customer',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
         content: Text(
           'Are you sure you want to delete this customer? This will also delete all associated loans and EMIs.',
           style: GoogleFonts.inter(),
@@ -294,7 +318,10 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey[600])),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: Colors.grey[600]),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -306,19 +333,29 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                 navigator.pop(true);
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
-                    content: Text('Customer deleted successfully!', style: GoogleFonts.inter()),
+                    content: Text(
+                      'Customer deleted successfully!',
+                      style: GoogleFonts.inter(),
+                    ),
                     backgroundColor: const Color(0xFF059669),
                     behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: Text('Delete', style: GoogleFonts.inter(color: Colors.white)),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
           ),
         ],
       ),

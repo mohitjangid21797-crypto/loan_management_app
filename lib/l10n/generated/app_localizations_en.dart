@@ -126,9 +126,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customerUpdated => 'Customer updated successfully!';
 
   @override
-  String get customerDeleted => 'Customer deleted successfully!';
-
-  @override
   String get confirmDeleteCustomer =>
       'Are you sure you want to delete this customer? This will also delete all associated loans and EMIs.';
 
@@ -672,6 +669,97 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pdfOptions => 'PDF Options';
+
+  @override
+  String get choosePdfLanguage => 'Choose PDF language';
+
+  @override
+  String selectedPdfLanguage(Object languageName) {
+    return 'Use selected app language ($languageName)';
+  }
+
+  @override
+  String get pdfSystemHeading => 'LOAN MANAGEMENT SYSTEM';
+
+  @override
+  String get pdfAgreementSubtitle => 'Loan Agreement & Payment Summary';
+
+  @override
+  String get monthsCount => 'Months';
+
+  @override
+  String get smartFinancialSolutions => 'Smart Financial Solutions';
+
+  @override
+  String get backupYourData => 'Backup Your Data';
+
+  @override
+  String get backupYourDataDescription =>
+      'Secure your loan data by backing it up to Google Drive. You can restore it anytime, even after reinstalling the app.';
+
+  @override
+  String get profileUpdated => 'Profile updated successfully!';
+
+  @override
+  String get lenderDetails => 'Lender Details';
+
+  @override
+  String get missingPdfData => 'Missing data to generate PDF';
+
+  @override
+  String get deleteDocumentTitle => 'Delete Document';
+
+  @override
+  String get confirmDeletePdf =>
+      'Are you sure you want to delete this PDF document?';
+
+  @override
+  String get documentDeleted => 'Document deleted';
+
+  @override
+  String get groupedByCustomer => 'Grouped by Customer';
+
+  @override
+  String get noCustomerForMobile =>
+      'No customer registered with this mobile number.\nPlease add the customer first.';
+
+  @override
+  String get customerDeleted => 'Customer deleted successfully!';
+
+  @override
+  String get confirmPayment => 'Confirm Payment';
+
+  @override
+  String get amountColon => 'Amount:';
+
+  @override
+  String get dueDateColon => 'Due Date:';
+
+  @override
+  String get totalAmountColon => 'Total Amount:';
+
+  @override
+  String get payAll => 'Pay All';
+
+  @override
+  String get backupPasswordPrompt =>
+      'Enter the password you used when creating this backup.';
+
+  @override
+  String get restoreEncryptedBackup => 'Restore from Encrypted Backup';
+
+  @override
+  String get restoreGoogleAccountInstruction =>
+      'Sign in with the same Google account. You will need the backup password you set during backup. After restore, you must set a new M-PIN (M-PIN is not stored in backups for security).';
+
+  @override
+  String get appLanguage => 'App Language';
+
+  @override
+  String get choosePreferredLanguage => 'Choose your preferred language';
+
+  @override
+  String get customerDeletedToast => 'Customer deleted';
 
   @override
   String get documents => 'Documents';

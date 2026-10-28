@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'localized_text.dart';
 
 class AppTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -32,6 +33,7 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final validate = validator;
     final field = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -56,14 +58,20 @@ class AppTextField extends StatelessWidget {
             color: const Color(0xFF1E3A8A),
           ),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: localizedUiText(context, hint),
             hintStyle: GoogleFonts.inter(fontSize: 16, color: Colors.grey[400]),
-            prefixIcon: Icon(icon, color: const Color(0xFF1E3A8A).withValues(alpha: 0.7)),
+            prefixIcon: Icon(
+              icon,
+              color: const Color(0xFF1E3A8A).withValues(alpha: 0.7),
+            ),
             suffixIcon: suffixIcon,
             counterText: '',
             filled: true,
             fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 18,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(color: Colors.grey[200]!),
@@ -85,13 +93,24 @@ class AppTextField extends StatelessWidget {
               borderSide: const BorderSide(color: Colors.red, width: 2),
             ),
           ),
-          validator: validator,
+          validator: validate == null
+              ? null
+              : (value) {
+                  final error = validate(value);
+                  return error == null ? null : localizedUiText(context, error);
+                },
         ),
       ],
     );
 
     if (delay != null) {
-      return field.animate().fadeIn(duration: 600.ms, delay: Duration(milliseconds: delay!)).slideX(begin: -0.3);
+      return field
+          .animate()
+          .fadeIn(
+            duration: 600.ms,
+            delay: Duration(milliseconds: delay!),
+          )
+          .slideX(begin: -0.3);
     }
     return field;
   }
@@ -138,17 +157,25 @@ class AppButton extends StatelessWidget {
     this.borderRadius,
     this.icon,
     this.borderColor,
-    this.borderWidth = 1.5,
+    this.borderWidth = 1,
   }) : isOutlined = true,
        backgroundColor = null;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBorderColor = borderColor ?? (isOutlined ? (foregroundColor ?? const Color(0xFF1E3A8A)) : Colors.transparent);
-    final effectiveBackgroundColor = isOutlined ? Colors.transparent : (backgroundColor ?? const Color(0xFF1E3A8A));
-    final effectiveForegroundColor = foregroundColor ?? (isOutlined ? const Color(0xFF1E3A8A) : Colors.white);
+    final effectiveBorderColor =
+        borderColor ??
+        (isOutlined
+            ? (foregroundColor ?? const Color(0xFF1E3A8A))
+            : Colors.transparent);
+    final effectiveBackgroundColor = isOutlined
+        ? Colors.transparent
+        : (backgroundColor ?? const Color(0xFF1E3A8A));
+    final effectiveForegroundColor =
+        foregroundColor ??
+        (isOutlined ? const Color(0xFF1E3A8A) : Colors.white);
     final effectiveBorderWidth = isOutlined ? borderWidth : 0.0;
-    
+
     return SizedBox(
       width: width ?? double.infinity,
       height: height,
@@ -158,11 +185,16 @@ class AppButton extends StatelessWidget {
           backgroundColor: effectiveBackgroundColor,
           foregroundColor: effectiveForegroundColor,
           elevation: 0,
-          side: BorderSide(color: effectiveBorderColor, width: effectiveBorderWidth),
+          side: BorderSide(
+            color: effectiveBorderColor,
+            width: effectiveBorderWidth,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: borderRadius ?? BorderRadius.circular(16),
           ),
-          shadowColor: (backgroundColor ?? const Color(0xFF1E3A8A)).withValues(alpha: 0.4),
+          shadowColor: (backgroundColor ?? const Color(0xFF1E3A8A)).withValues(
+            alpha: 0.4,
+          ),
         ),
         child: isLoading
             ? const SizedBox(
@@ -222,13 +254,15 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? Colors.white,
         borderRadius: borderRadius ?? BorderRadius.circular(20),
-        boxShadow: boxShadow ?? [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow:
+            boxShadow ??
+            [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
         border: Border.all(color: Colors.grey[100]!),
       ),
       child: child,
@@ -316,7 +350,13 @@ class StatCard extends StatelessWidget {
     );
 
     if (delay != null) {
-      return card.animate().fadeIn(duration: 600.ms, delay: Duration(milliseconds: delay!)).slideY(begin: 0.2);
+      return card
+          .animate()
+          .fadeIn(
+            duration: 600.ms,
+            delay: Duration(milliseconds: delay!),
+          )
+          .slideY(begin: 0.2);
     }
     return card;
   }
@@ -327,6 +367,7 @@ class SearchField extends StatelessWidget {
   final String hint;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onClear;
+  final TextInputType? keyboardType;
 
   const SearchField({
     super.key,
@@ -334,6 +375,7 @@ class SearchField extends StatelessWidget {
     required this.hint,
     this.onChanged,
     this.onClear,
+    this.keyboardType,
   });
 
   @override
@@ -341,9 +383,10 @@ class SearchField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
+      keyboardType: keyboardType,
       style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF1E3A8A)),
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: localizedUiText(context, hint),
         hintStyle: GoogleFonts.inter(fontSize: 16, color: Colors.grey[400]),
         prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[500]),
         suffixIcon: controller.text.isNotEmpty
@@ -358,7 +401,10 @@ class SearchField extends StatelessWidget {
             : null,
         filled: true,
         fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey[200]!),
@@ -408,26 +454,35 @@ class EmptyState extends StatelessWidget {
             ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
             const SizedBox(height: 24),
             Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1E3A8A),
-              ),
-              textAlign: TextAlign.center,
-            ).animate().fadeIn(duration: 600.ms, delay: 200.ms).slideY(begin: 0.3),
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1E3A8A),
+                  ),
+                  textAlign: TextAlign.center,
+                )
+                .animate()
+                .fadeIn(duration: 600.ms, delay: 200.ms)
+                .slideY(begin: 0.3),
             const SizedBox(height: 8),
             Text(
-              subtitle,
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ).animate().fadeIn(duration: 600.ms, delay: 300.ms).slideY(begin: 0.3),
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                )
+                .animate()
+                .fadeIn(duration: 600.ms, delay: 300.ms)
+                .slideY(begin: 0.3),
             if (action != null) ...[
               const SizedBox(height: 24),
-              action!.animate().fadeIn(duration: 600.ms, delay: 400.ms).slideY(begin: 0.3),
+              action!
+                  .animate()
+                  .fadeIn(duration: 600.ms, delay: 400.ms)
+                  .slideY(begin: 0.3),
             ],
           ],
         ),

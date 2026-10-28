@@ -18,11 +18,17 @@ class AppProvider extends ChangeNotifier {
   List<LoanDocument> get documents => List.unmodifiable(_documents);
 
   Customer? getCustomerByMobile(String mobile) {
-    try {
-      return _customers.firstWhere((c) => c.mobileNumber == mobile);
-    } catch (_) {
-      return null;
+    final query = mobile.replaceAll(RegExp(r'\D'), '');
+    if (query.length < 10) return null;
+    final normalizedQuery = query.substring(query.length - 10);
+    for (final customer in _customers) {
+      final customerMobile = customer.mobileNumber.replaceAll(RegExp(r'\D'), '');
+      if (customerMobile.length >= 10 &&
+          customerMobile.substring(customerMobile.length - 10) == normalizedQuery) {
+        return customer;
+      }
     }
+    return null;
   }
 
   Customer? getCustomerById(String id) {
@@ -219,7 +225,12 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> addDocument(LoanDocument document) async {
-    _documents.add(document);
+    final index = _documents.indexWhere((existing) => existing.id == document.id);
+    if (index == -1) {
+      _documents.add(document);
+    } else {
+      _documents[index] = document;
+    }
     await _saveToStorage();
     notifyListeners();
   }

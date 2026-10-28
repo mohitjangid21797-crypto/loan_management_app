@@ -1,14 +1,16 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter/services.dart';
+
+import '../l10n/ui_translations.dart';
 import '../models/index.dart';
 
 class PDFGenerator {
-  static final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
-  static final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, hh:mm a');
   static final NumberFormat _currencyFormat = NumberFormat.currency(
     locale: 'en_IN',
-    symbol: 'Rs.',
+    symbol: 'Rs. ',
     decimalDigits: 2,
   );
 
@@ -17,41 +19,142 @@ class PDFGenerator {
     required Customer customer,
     required Loan loan,
     required List<EMI> emis,
+    required String languageCode,
   }) async {
-    final pdf = pw.Document();
+    await initializeDateFormatting(languageCode);
+    final font = await _loadFont(languageCode);
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: font,
+        bold: font,
+        italic: font,
+        boldItalic: font,
+        fontFallback: [pw.Font.helvetica()],
+      ),
+    );
     final paidEMIs = emis.where((e) => e.status == EMIStatus.paid).toList();
-    final pendingEMIs = emis.where((e) => e.status == EMIStatus.pending).toList();
+    final pendingEMIs = emis
+        .where((e) => e.status == EMIStatus.pending)
+        .toList();
+    final sortedEmis = List<EMI>.from(emis)
+      ..sort((a, b) => a.installmentNumber.compareTo(b.installmentNumber));
 
     pdf.addPage(
-      pw.MultiPage(
+      pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        build: (context) => [
-          _buildHeader(lender),
-          pw.SizedBox(height: 24),
-          _buildTitle(),
-          pw.SizedBox(height: 24),
-          _buildPartiesSection(lender, customer),
-          pw.SizedBox(height: 24),
-          _buildLoanDetails(loan),
-          pw.SizedBox(height: 24),
-          _buildEMISchedule(emis),
-          pw.SizedBox(height: 24),
-          _buildPaymentSummary(loan, paidEMIs, pendingEMIs),
-          pw.SizedBox(height: 32),
-          _buildSignatures(lender, customer),
-          pw.SizedBox(height: 24),
-          _buildFooter(),
-        ],
+        build: (context) => pw.Directionality(
+          textDirection: _textDirection(languageCode),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildHeader(lender, languageCode, compact: true),
+              pw.SizedBox(height: 8),
+              _buildTitle(languageCode, compact: true),
+              pw.SizedBox(height: 8),
+              _buildPartiesSection(
+                lender,
+                customer,
+                languageCode,
+                compact: true,
+              ),
+              pw.SizedBox(height: 8),
+              _buildLoanDetails(loan, languageCode, compact: true),
+              pw.SizedBox(height: 8),
+              _buildEMIScheduleHeading(languageCode),
+              pw.SizedBox(height: 4),
+              _buildEMIScheduleTable(
+                sortedEmis.take(30).toList(),
+                languageCode,
+                compact: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    for (var index = 30; index < sortedEmis.length; index += 60) {
+      final pageEmis = sortedEmis.skip(index).take(60).toList();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (context) => pw.Directionality(
+            textDirection: _textDirection(languageCode),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _buildEMIScheduleHeading(languageCode, continued: true),
+                pw.SizedBox(height: 12),
+                _buildEMIScheduleTable(pageEmis, languageCode, compact: true),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (context) => pw.Directionality(
+          textDirection: _textDirection(languageCode),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPaymentSummary(loan, paidEMIs, pendingEMIs, languageCode),
+              pw.SizedBox(height: 32),
+              _buildSignatures(lender, customer, languageCode),
+              pw.SizedBox(height: 24),
+              _buildFooter(languageCode),
+            ],
+          ),
+        ),
       ),
     );
 
     return pdf;
   }
 
-  static pw.Widget _buildHeader(Lender lender) {
+  static String _translateKey(String languageCode, String key) =>
+      UiTranslations.translateKey(languageCode, key);
+
+  static pw.TextDirection _textDirection(String languageCode) =>
+      languageCode == 'ur' ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+
+  static Future<pw.Font> _loadFont(String languageCode) async {
+    final family = switch (languageCode) {
+      'as' || 'bn' => 'NotoSansBengali',
+      'gu' => 'NotoSansGujarati',
+      'hi' || 'mr' || 'ne' => 'NotoSansDevanagari',
+      'kn' => 'NotoSansKannada',
+      'ml' => 'NotoSansMalayalam',
+      'or' => 'NotoSansOriya',
+      'pa' => 'NotoSansGurmukhi',
+      'ta' => 'NotoSansTamil',
+      'te' => 'NotoSansTelugu',
+      'ur' => 'NotoSansArabic',
+      _ => 'NotoSansDevanagari',
+    };
+    final data = await rootBundle.load('assets/fonts/$family-Regular.ttf');
+    return pw.Font.ttf(data);
+  }
+
+  static DateFormat _dateFormat(String languageCode) =>
+      DateFormat('dd MMM yyyy', languageCode);
+
+  static DateFormat _dateTimeFormat(String languageCode) =>
+      DateFormat('dd MMM yyyy, hh:mm a', languageCode);
+
+  static pw.Widget _buildHeader(
+    Lender lender,
+    String languageCode, {
+    bool compact = false,
+  }) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(16),
+      padding: pw.EdgeInsets.all(compact ? 10 : 16),
       decoration: pw.BoxDecoration(
         color: PdfColors.blue900,
         borderRadius: pw.BorderRadius.circular(8),
@@ -63,18 +166,18 @@ class PDFGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                'LOAN MANAGEMENT SYSTEM',
+                _translateKey(languageCode, 'appTitle'),
                 style: pw.TextStyle(
-                  fontSize: 18,
+                  fontSize: compact ? 14 : 18,
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColors.white,
                 ),
               ),
               pw.SizedBox(height: 4),
               pw.Text(
-                'Loan Agreement & Payment Summary',
+                _translateKey(languageCode, 'pdfAgreementSubtitle'),
                 style: pw.TextStyle(
-                  fontSize: 12,
+                  fontSize: compact ? 9 : 12,
                   color: PdfColors.grey100,
                 ),
               ),
@@ -84,12 +187,18 @@ class PDFGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
               pw.Text(
-                'Generated: ${_dateTimeFormat.format(DateTime.now())}',
-                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey100),
+                '${_translateKey(languageCode, 'generatedLabel')}: ${_dateTimeFormat(languageCode).format(DateTime.now())}',
+                style: pw.TextStyle(
+                  fontSize: compact ? 8 : 10,
+                  color: PdfColors.grey100,
+                ),
               ),
               pw.Text(
-                'Doc ID: ${lender.licenseNumber}',
-                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey100),
+                '${_translateKey(languageCode, 'docIdLabel')}: ${lender.licenseNumber}',
+                style: pw.TextStyle(
+                  fontSize: compact ? 8 : 10,
+                  color: PdfColors.grey100,
+                ),
               ),
             ],
           ),
@@ -98,53 +207,68 @@ class PDFGenerator {
     );
   }
 
-  static pw.Widget _buildTitle() {
+  static pw.Widget _buildTitle(String languageCode, {bool compact = false}) {
     return pw.Center(
       child: pw.Text(
-        'LOAN AGREEMENT',
+        _translateKey(languageCode, 'loanAgreementTitle'),
         style: pw.TextStyle(
-          fontSize: 24,
+          fontSize: compact ? 18 : 24,
           fontWeight: pw.FontWeight.bold,
           color: PdfColors.blue900,
-          letterSpacing: 1.5,
+          letterSpacing: languageCode == 'en' ? 1.5 : 0,
         ),
       ),
     );
   }
 
-  static pw.Widget _buildPartiesSection(Lender lender, Customer customer) {
+  static pw.Widget _buildPartiesSection(
+    Lender lender,
+    Customer customer,
+    String languageCode, {
+    bool compact = false,
+  }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-          'PARTIES TO THE AGREEMENT',
+          _translateKey(languageCode, 'partiesTitle'),
           style: pw.TextStyle(
-            fontSize: 14,
+            fontSize: compact ? 11 : 14,
             fontWeight: pw.FontWeight.bold,
             color: PdfColors.blue900,
           ),
         ),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: compact ? 6 : 12),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Expanded(
-              child: _buildPartyCard('LENDER', [
-                'Name: ${lender.name}',
-                'Mobile: ${lender.mobileNumber}',
-                'Email: ${lender.email}',
-                'Address: ${lender.address}',
-                'License No: ${lender.licenseNumber}',
-              ]),
+              child: _buildPartyCard(
+                'lenderLabel',
+                [
+                  '${_translateKey(languageCode, 'lenderName')}: ${lender.name}',
+                  '${_translateKey(languageCode, 'mobileLabelShort')}: ${lender.mobileNumber}',
+                  '${_translateKey(languageCode, 'emailLabelShort')}: ${lender.email}',
+                  '${_translateKey(languageCode, 'addressLabel')}: ${lender.address}',
+                  '${_translateKey(languageCode, 'licenseLabel')}: ${lender.licenseNumber}',
+                ],
+                languageCode,
+                compact: compact,
+              ),
             ),
             pw.SizedBox(width: 16),
             pw.Expanded(
-              child: _buildPartyCard('BORROWER', [
-                'Name: ${customer.name}',
-                'Mobile: ${customer.mobileNumber}',
-                'Email: ${customer.email}',
-                'Location: ${customer.location}',
-              ]),
+              child: _buildPartyCard(
+                'borrowerLabel',
+                [
+                  '${_translateKey(languageCode, 'borrowerName')}: ${customer.name}',
+                  '${_translateKey(languageCode, 'mobileLabelShort')}: ${customer.mobileNumber}',
+                  '${_translateKey(languageCode, 'emailLabelShort')}: ${customer.email}',
+                  '${_translateKey(languageCode, 'locationLabelShort')}: ${customer.location}',
+                ],
+                languageCode,
+                compact: compact,
+              ),
             ),
           ],
         ),
@@ -152,9 +276,14 @@ class PDFGenerator {
     );
   }
 
-  static pw.Widget _buildPartyCard(String title, List<String> details) {
+  static pw.Widget _buildPartyCard(
+    String title,
+    List<String> details,
+    String languageCode, {
+    bool compact = false,
+  }) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: pw.EdgeInsets.all(compact ? 7 : 12),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300),
         borderRadius: pw.BorderRadius.circular(8),
@@ -164,40 +293,54 @@ class PDFGenerator {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            title,
+            _translateKey(languageCode, title),
             style: pw.TextStyle(
-              fontSize: 11,
+              fontSize: compact ? 9 : 11,
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.blue900,
             ),
           ),
-          pw.SizedBox(height: 8),
-          ...details.map((d) => pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 4),
-                child: pw.Text(d, style: const pw.TextStyle(fontSize: 10)),
-              )),
+          pw.SizedBox(height: compact ? 4 : 8),
+          ...details.map(
+            (d) => pw.Padding(
+              padding: pw.EdgeInsets.only(bottom: compact ? 2 : 4),
+              child: pw.Text(
+                d,
+                style: pw.TextStyle(fontSize: compact ? 8 : 10),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  static pw.Widget _buildLoanDetails(Loan loan) {
+  static pw.Widget _buildLoanDetails(
+    Loan loan,
+    String languageCode, {
+    bool compact = false,
+  }) {
+    final loanStatus = switch (loan.status.toLowerCase()) {
+      'active' => _translateKey(languageCode, 'activeFilter'),
+      'completed' => _translateKey(languageCode, 'completedFilter'),
+      _ => _titleCase(loan.status),
+    };
     final interestTypeLabel = loan.interestType == InterestType.simple
-        ? 'Simple Interest'
-        : 'Compound Interest';
+        ? _translateKey(languageCode, 'simpleInterestLabel')
+        : _translateKey(languageCode, 'compoundInterestLabel');
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-          'LOAN DETAILS',
+          _translateKey(languageCode, 'loanDetailsTitle'),
           style: pw.TextStyle(
-            fontSize: 14,
+            fontSize: compact ? 11 : 14,
             fontWeight: pw.FontWeight.bold,
             color: PdfColors.blue900,
           ),
         ),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: compact ? 6 : 12),
         pw.Table(
           border: pw.TableBorder.all(color: PdfColors.grey300),
           columnWidths: {
@@ -207,180 +350,229 @@ class PDFGenerator {
             3: const pw.FlexColumnWidth(2),
           },
           children: [
-            _buildTableRow('Principal Amount', _currencyFormat.format(loan.principalAmount),
-                'Interest Rate', '${loan.interestRate}% p.a.'),
-            _buildTableRow('Tenure', '${loan.tenureMonths} Months',
-                'Interest Type', interestTypeLabel),
-            _buildTableRow('Start Date', _dateFormat.format(loan.startDate),
-                'Monthly EMI', _currencyFormat.format(loan.monthlyEMI)),
-            _buildTableRow('Total Interest', _currencyFormat.format(loan.totalInterest),
-                'Total Payable', _currencyFormat.format(loan.totalAmount)),
-            _buildTableRow('Loan Status', loan.status.toUpperCase(),
-                'Loan ID', loan.id.substring(0, 8).toUpperCase()),
+            _buildTableRow(
+              'principalAmountLabel',
+              _currencyFormat.format(loan.principalAmount),
+              'interestRateLabelFull',
+              '${loan.interestRate}% p.a.',
+              languageCode,
+              compact: compact,
+            ),
+            _buildTableRow(
+              'tenureLabelFull',
+              '${loan.tenureMonths} ${_translateKey(languageCode, 'monthsCount')}',
+              'interestTypeLabel',
+              interestTypeLabel,
+              languageCode,
+              compact: compact,
+            ),
+            _buildTableRow(
+              'startDateLabel',
+              _dateFormat(languageCode).format(loan.startDate),
+              'monthlyEmiLabel',
+              _currencyFormat.format(loan.monthlyEMI),
+              languageCode,
+              compact: compact,
+            ),
+            _buildTableRow(
+              'totalInterestLabel',
+              _currencyFormat.format(loan.totalInterest),
+              'totalPayableLabel',
+              _currencyFormat.format(loan.totalAmount),
+              languageCode,
+              compact: compact,
+            ),
+            _buildTableRow(
+              'loanStatusLabel',
+              loanStatus,
+              'loanIdLabel',
+              loan.id.substring(0, 8).toUpperCase(),
+              languageCode,
+              compact: compact,
+            ),
           ],
         ),
       ],
     );
   }
 
-  static pw.TableRow _buildTableRow(String label1, String value1, String label2, String value2) {
+  static pw.TableRow _buildTableRow(
+    String label1,
+    String value1,
+    String label2,
+    String value2,
+    String languageCode, {
+    bool compact = false,
+  }) {
     return pw.TableRow(
       decoration: const pw.BoxDecoration(color: PdfColors.white),
       children: [
         pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(label1, style: const pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(value1, style: const pw.TextStyle(fontSize: 9)),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(label2, style: const pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(value2, style: const pw.TextStyle(fontSize: 9)),
-        ),
-      ],
-    );
-  }
-
-  static pw.Widget _buildEMISchedule(List<EMI> emis) {
-    // Sort EMIs by installment number
-    final sortedEmis = List<EMI>.from(emis)..sort((a, b) => a.installmentNumber.compareTo(b.installmentNumber));
-    
-    // First page: 10 installments, subsequent pages: 30 installments
-    const int firstPageCount = 10;
-    const int subsequentPageCount = 30;
-    
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          'EMI SCHEDULE',
-          style: pw.TextStyle(
-            fontSize: 14,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfColors.blue900,
+          padding: pw.EdgeInsets.all(compact ? 4 : 8),
+          child: pw.Text(
+            _translateKey(languageCode, label1),
+            style: pw.TextStyle(
+              fontSize: compact ? 7 : 9,
+              fontWeight: pw.FontWeight.bold,
+            ),
           ),
         ),
-        pw.SizedBox(height: 12),
-        ..._buildEMISchedulePages(sortedEmis, firstPageCount, subsequentPageCount),
+        pw.Padding(
+          padding: pw.EdgeInsets.all(compact ? 4 : 8),
+          child: pw.Text(
+            value1,
+            style: pw.TextStyle(fontSize: compact ? 7 : 9),
+          ),
+        ),
+        pw.Padding(
+          padding: pw.EdgeInsets.all(compact ? 4 : 8),
+          child: pw.Text(
+            _translateKey(languageCode, label2),
+            style: pw.TextStyle(
+              fontSize: compact ? 7 : 9,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ),
+        pw.Padding(
+          padding: pw.EdgeInsets.all(compact ? 4 : 8),
+          child: pw.Text(
+            value2,
+            style: pw.TextStyle(fontSize: compact ? 7 : 9),
+          ),
+        ),
       ],
     );
   }
 
-  static List<pw.Widget> _buildEMISchedulePages(List<EMI> emis, int firstPageCount, int subsequentPageCount) {
-    final List<pw.Widget> pages = [];
-    int index = 0;
-    bool isFirstPage = true;
-    
-    while (index < emis.length) {
-      final pageCount = isFirstPage ? firstPageCount : subsequentPageCount;
-      final pageEmis = emis.skip(index).take(pageCount).toList();
-      
-      if (pageEmis.isEmpty) break;
-      
-      pages.add(
-        pw.Table(
-          border: pw.TableBorder.all(color: PdfColors.grey300),
-          columnWidths: {
-            0: const pw.FlexColumnWidth(1),
-            1: const pw.FlexColumnWidth(1.5),
-            2: const pw.FlexColumnWidth(1.5),
-            3: const pw.FlexColumnWidth(1.5),
-            4: const pw.FlexColumnWidth(1.5),
-          },
+  static pw.Widget _buildEMIScheduleHeading(
+    String languageCode, {
+    bool continued = false,
+  }) {
+    return pw.Text(
+      _translateKey(languageCode, 'emiScheduleTitle'),
+      style: pw.TextStyle(
+        fontSize: continued ? 12 : 14,
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.blue900,
+      ),
+    );
+  }
+
+  static pw.Widget _buildEMIScheduleTable(
+    List<EMI> emis,
+    String languageCode, {
+    bool compact = false,
+  }) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(1.5),
+        2: const pw.FlexColumnWidth(1.5),
+        3: const pw.FlexColumnWidth(1.5),
+        4: const pw.FlexColumnWidth(1.5),
+      },
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.blue900),
           children: [
-            pw.TableRow(
-              decoration: const pw.BoxDecoration(color: PdfColors.blue900),
-              children: [
-                _tableHeaderCell('Inst. #'),
-                _tableHeaderCell('Due Date'),
-                _tableHeaderCell('EMI Amount'),
-                _tableHeaderCell('Status'),
-                _tableHeaderCell('Paid Date'),
-              ],
+            _tableHeaderCell(
+              'installmentHeader',
+              languageCode,
+              compact: compact,
             ),
-            ...pageEmis.map((emi) => pw.TableRow(
-                  decoration: pw.BoxDecoration(
-                    color: emi.status == EMIStatus.paid
-                        ? PdfColors.green50
-                        : emi.isOverdue
-                            ? PdfColors.red50
-                            : PdfColors.white,
-                  ),
-                  children: [
-                    _tableCell(emi.installmentNumber.toString()),
-                    _tableCell(_dateFormat.format(emi.dueDate)),
-                    _tableCell(_currencyFormat.format(emi.amount)),
-                    _tableCell(
-                      emi.status.name.toUpperCase(),
-                      color: emi.status == EMIStatus.paid
-                          ? PdfColors.green800
-                          : emi.isOverdue
-                              ? PdfColors.red800
-                              : PdfColors.orange800,
-                    ),
-                    _tableCell(emi.paidDate != null
-                        ? _dateFormat.format(emi.paidDate!)
-                        : '-'),
-                  ],
-                )),
+            _tableHeaderCell('dueDateHeader', languageCode, compact: compact),
+            _tableHeaderCell('emiAmountHeader', languageCode, compact: compact),
+            _tableHeaderCell('statusHeader', languageCode, compact: compact),
+            _tableHeaderCell('paidDateHeader', languageCode, compact: compact),
           ],
         ),
-      );
-      
-      if (!isFirstPage && index + pageCount < emis.length) {
-        pages.add(pw.SizedBox(height: 20)); // Space between pages
-        pages.add(
-          pw.Text(
-            'EMI SCHEDULE (Continued)',
-            style: pw.TextStyle(
-              fontSize: 12,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blue900,
+        ...emis.map(
+          (emi) => pw.TableRow(
+            decoration: pw.BoxDecoration(
+              color: emi.status == EMIStatus.paid
+                  ? PdfColors.green50
+                  : emi.isOverdue
+                  ? PdfColors.red50
+                  : PdfColors.white,
             ),
+            children: [
+              _tableCell(emi.installmentNumber.toString(), compact: compact),
+              _tableCell(
+                _dateFormat(languageCode).format(emi.dueDate),
+                compact: compact,
+              ),
+              _tableCell(_currencyFormat.format(emi.amount), compact: compact),
+              _tableCell(
+                _translateKey(languageCode, switch (emi.status) {
+                  EMIStatus.paid => 'emiPaid',
+                  EMIStatus.pending => 'emiPending',
+                  EMIStatus.overdue => 'emiOverdue',
+                }),
+                compact: compact,
+                color: emi.status == EMIStatus.paid
+                    ? PdfColors.green800
+                    : emi.isOverdue
+                    ? PdfColors.red800
+                    : PdfColors.orange800,
+              ),
+              _tableCell(
+                emi.paidDate != null
+                    ? _dateFormat(languageCode).format(emi.paidDate!)
+                    : '-',
+                compact: compact,
+              ),
+            ],
           ),
-        );
-        pages.add(pw.SizedBox(height: 12));
-      }
-      
-      index += pageCount;
-      isFirstPage = false;
-    }
-    
-    return pages;
-  }
-
-  static pw.Widget _tableHeaderCell(String text) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(6),
-      child: pw.Text(text,
-          style: const pw.TextStyle(
-            fontSize: 8,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfColors.white,
-          ),
-          textAlign: pw.TextAlign.center),
+        ),
+      ],
     );
   }
 
-  static pw.Widget _tableCell(String text, {PdfColor? color}) {
+  static pw.Widget _tableHeaderCell(
+    String text,
+    String languageCode, {
+    bool compact = false,
+  }) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.all(6),
-      child: pw.Text(text,
-          style: pw.TextStyle(
-            fontSize: 8,
-            color: color ?? PdfColors.black,
-          ),
-          textAlign: pw.TextAlign.center),
+      padding: pw.EdgeInsets.all(compact ? 2 : 6),
+      child: pw.Text(
+        _translateKey(languageCode, text),
+        style: pw.TextStyle(
+          fontSize: compact ? 6 : 8,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.white,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
     );
   }
 
-  static pw.Widget _buildPaymentSummary(Loan loan, List<EMI> paidEMIs, List<EMI> pendingEMIs) {
+  static pw.Widget _tableCell(
+    String text, {
+    PdfColor? color,
+    bool compact = false,
+  }) {
+    return pw.Padding(
+      padding: pw.EdgeInsets.all(compact ? 2 : 6),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: compact ? 6 : 8,
+          color: color ?? PdfColors.black,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  static pw.Widget _buildPaymentSummary(
+    Loan loan,
+    List<EMI> paidEMIs,
+    List<EMI> pendingEMIs,
+    String languageCode,
+  ) {
     final totalPaid = paidEMIs.fold(0.0, (sum, e) => sum + e.amount);
     final totalPending = pendingEMIs.fold(0.0, (sum, e) => sum + e.amount);
 
@@ -395,7 +587,7 @@ class PDFGenerator {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            'PAYMENT SUMMARY',
+            _translateKey(languageCode, 'paymentSummaryTitle'),
             style: pw.TextStyle(
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,
@@ -406,9 +598,21 @@ class PDFGenerator {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              _buildSummaryItem('Total EMIs', loan.tenureMonths.toString()),
-              _buildSummaryItem('Paid EMIs', paidEMIs.length.toString()),
-              _buildSummaryItem('Pending EMIs', pendingEMIs.length.toString()),
+              _buildSummaryItem(
+                'totalEmisLabel',
+                loan.tenureMonths.toString(),
+                languageCode,
+              ),
+              _buildSummaryItem(
+                'paidEmisLabel',
+                paidEMIs.length.toString(),
+                languageCode,
+              ),
+              _buildSummaryItem(
+                'pendingEmisLabel',
+                pendingEMIs.length.toString(),
+                languageCode,
+              ),
             ],
           ),
           pw.Divider(thickness: 1, color: PdfColors.grey300),
@@ -416,9 +620,24 @@ class PDFGenerator {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              _buildSummaryItem('Total Paid', _currencyFormat.format(totalPaid), isHighlight: true),
-              _buildSummaryItem('Total Pending', _currencyFormat.format(totalPending), isHighlight: true),
-              _buildSummaryItem('Total Loan', _currencyFormat.format(loan.totalAmount), isHighlight: true),
+              _buildSummaryItem(
+                'totalPaidLabel',
+                _currencyFormat.format(totalPaid),
+                languageCode,
+                isHighlight: true,
+              ),
+              _buildSummaryItem(
+                'totalPendingLabel',
+                _currencyFormat.format(totalPending),
+                languageCode,
+                isHighlight: true,
+              ),
+              _buildSummaryItem(
+                'totalLoanLabel',
+                _currencyFormat.format(loan.totalAmount),
+                languageCode,
+                isHighlight: true,
+              ),
             ],
           ),
         ],
@@ -426,27 +645,37 @@ class PDFGenerator {
     );
   }
 
-  static pw.Widget _buildSummaryItem(String label, String value, {bool isHighlight = false}) {
+  static pw.Widget _buildSummaryItem(
+    String label,
+    String value,
+    String languageCode, {
+    bool isHighlight = false,
+  }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(label,
-            style: pw.TextStyle(
-              fontSize: 9,
-              color: PdfColors.grey600,
-            )),
+        pw.Text(
+          _translateKey(languageCode, label),
+          style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+        ),
         pw.SizedBox(height: 4),
-        pw.Text(value,
-            style: pw.TextStyle(
-              fontSize: isHighlight ? 12 : 11,
-              fontWeight: isHighlight ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: isHighlight ? PdfColors.blue900 : PdfColors.black,
-            )),
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            fontSize: isHighlight ? 12 : 11,
+            fontWeight: isHighlight ? pw.FontWeight.bold : pw.FontWeight.normal,
+            color: isHighlight ? PdfColors.blue900 : PdfColors.black,
+          ),
+        ),
       ],
     );
   }
 
-  static pw.Widget _buildSignatures(Lender lender, Customer customer) {
+  static pw.Widget _buildSignatures(
+    Lender lender,
+    Customer customer,
+    String languageCode,
+  ) {
     return pw.Row(
       children: [
         pw.Expanded(
@@ -461,9 +690,27 @@ class PDFGenerator {
                 ),
               ),
               pw.SizedBox(height: 8),
-              pw.Text('Lender Signature', style: const pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-              pw.Text(lender.name, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
-              pw.Text('Date: ${_dateFormat.format(DateTime.now())}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              pw.Text(
+                _translateKey(languageCode, 'lenderSignature'),
+                style: const pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.Text(
+                lender.name,
+                style: const pw.TextStyle(
+                  fontSize: 9,
+                  color: PdfColors.grey600,
+                ),
+              ),
+              pw.Text(
+                '${_translateKey(languageCode, 'dateLabel')}: ${_dateFormat(languageCode).format(DateTime.now())}',
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey600,
+                ),
+              ),
             ],
           ),
         ),
@@ -480,9 +727,27 @@ class PDFGenerator {
                 ),
               ),
               pw.SizedBox(height: 8),
-              pw.Text('Borrower Signature', style: const pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-              pw.Text(customer.name, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
-              pw.Text('Date: ${_dateFormat.format(DateTime.now())}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              pw.Text(
+                _translateKey(languageCode, 'borrowerSignature'),
+                style: const pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.Text(
+                customer.name,
+                style: const pw.TextStyle(
+                  fontSize: 9,
+                  color: PdfColors.grey600,
+                ),
+              ),
+              pw.Text(
+                '${_translateKey(languageCode, 'dateLabel')}: ${_dateFormat(languageCode).format(DateTime.now())}',
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey600,
+                ),
+              ),
             ],
           ),
         ),
@@ -490,27 +755,34 @@ class PDFGenerator {
     );
   }
 
-  static pw.Widget _buildFooter() {
+  static pw.Widget _buildFooter(String languageCode) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 1)),
+        border: pw.Border(
+          top: pw.BorderSide(color: PdfColors.grey300, width: 1),
+        ),
       ),
       child: pw.Column(
         children: [
           pw.Text(
-            'This document is computer-generated and does not require physical signature for validation.',
+            _translateKey(languageCode, 'footerText'),
             style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
             textAlign: pw.TextAlign.center,
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            'Loan Management System | Confidential Document',
+            _translateKey(languageCode, 'confidentialLabel'),
             style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
             textAlign: pw.TextAlign.center,
           ),
         ],
       ),
     );
+  }
+
+  static String _titleCase(String value) {
+    if (value.isEmpty) return value;
+    return '${value[0].toUpperCase()}${value.substring(1)}';
   }
 }

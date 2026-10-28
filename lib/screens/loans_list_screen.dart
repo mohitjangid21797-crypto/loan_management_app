@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +7,7 @@ import '../models/index.dart';
 import '../providers/app_provider.dart';
 import '../screens/create_loan_screen.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/localized_text.dart';
 import 'emi_payment_screen.dart';
 import 'all_pdfs_screen.dart';
 
@@ -80,7 +81,7 @@ class _LoansListScreenState extends State<LoansListScreen> {
                 autofocus: true,
                 style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF1E3A8A)),
                 decoration: InputDecoration(
-                  hintText: 'Search loans...',
+                  hintText: localizedUiText(context, 'Search loans...'),
                   hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
                   border: InputBorder.none,
                 ),
@@ -280,7 +281,10 @@ class _LoansListScreenState extends State<LoansListScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              loan.status.toUpperCase(),
+                              localizedUiText(
+                                context,
+                                loan.status == 'active' ? 'Active' : 'Completed',
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: _getStatusColor(loan.status)),
@@ -311,7 +315,7 @@ class _LoansListScreenState extends State<LoansListScreen> {
                       style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)),
                     ),
                     Text(
-                      'Total: ₹${loan.totalAmount.toStringAsFixed(0)}',
+                      '${localizedUiText(context, 'Total Amount')}: ₹${loan.totalAmount.toStringAsFixed(0)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[500]),
@@ -322,115 +326,230 @@ class _LoansListScreenState extends State<LoansListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Flexible(child: _buildInfoItem('Interest', '${loan.interestRate}% ${loan.interestType.name}', Icons.percent_rounded)),
-              Container(height: 40, width: 1, color: Colors.grey[200]),
-              Flexible(child: _buildInfoItem('Tenure', '${loan.tenureMonths} Months', Icons.calendar_month_rounded)),
-              Container(height: 40, width: 1, color: Colors.grey[200]),
-              Flexible(child: _buildInfoItem('Monthly EMI', '₹${loan.monthlyEMI.toStringAsFixed(2)}', Icons.currency_rupee_rounded)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Progress
           LayoutBuilder(
             builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 360;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              final columns = constraints.maxWidth < 480 ? 2 : 3;
+              const spacing = 12.0;
+              final itemWidth =
+                  (constraints.maxWidth - spacing * (columns - 1)) / columns;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Progress', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[600])),
-                                Text('$paidEMIs / ${loan.tenureMonths} Paid', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF1E3A8A))),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Stack(
-                              children: [
-                                Container(height: 6, decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(3))),
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 500),
-                                  height: 6,
-                                  width: constraints.maxWidth * 0.7 * (paidEMIs / loan.tenureMonths),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF10B981)]),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (!isNarrow) const SizedBox(width: 16),
-                      if (nextEMI != null)
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: nextEMI.isOverdue ? Colors.red.withValues(alpha: 0.1) : const Color(0xFF1E3A8A).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: nextEMI.isOverdue ? Colors.red.withValues(alpha: 0.3) : const Color(0xFF1E3A8A).withValues(alpha: 0.3)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Next EMI', style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[600])),
-                                Text('₹${nextEMI.amount.toStringAsFixed(2)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: nextEMI.isOverdue ? Colors.red : const Color(0xFF1E3A8A))),
-                                Text('Due: ${DateFormat('dd MMM').format(nextEMI.dueDate)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[500])),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildInfoItem(
+                      'Interest Rate',
+                      '${loan.interestRate}% • ${localizedUiText(context, loan.interestType == InterestType.simple ? 'Simple Interest' : 'Compound Interest')}',
+                      Icons.percent_rounded,
+                    ),
+                  ),
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildInfoItem(
+                      'Tenure',
+                      '${loan.tenureMonths} ${localizedUiText(context, 'Months')}',
+                      Icons.calendar_month_rounded,
+                    ),
+                  ),
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildInfoItem(
+                      'Monthly EMI',
+                      '₹${loan.monthlyEMI.toStringAsFixed(2)}',
+                      Icons.currency_rupee_rounded,
+                    ),
                   ),
                 ],
               );
             },
           ),
+          const SizedBox(height: 16),
+          // Progress
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final progressFraction = loan.tenureMonths > 0
+                  ? (paidEMIs / loan.tenureMonths).clamp(0.0, 1.0)
+                  : 0.0;
+              final progressContent = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Progress',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          '$paidEMIs / ${loan.tenureMonths} ${localizedUiText(context, 'Paid')}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1E3A8A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: Container(
+                      height: 6,
+                      color: Colors.grey[100],
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FractionallySizedBox(
+                        widthFactor: progressFraction,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF059669), Color(0xFF10B981)],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+
+              final nextEmiCard = nextEMI == null
+                  ? null
+                  : Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: nextEMI.isOverdue
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : const Color(0xFF1E3A8A).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: nextEMI.isOverdue
+                              ? Colors.red.withValues(alpha: 0.3)
+                              : const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Next EMI',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          Text(
+                            '₹${nextEMI.amount.toStringAsFixed(2)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: nextEMI.isOverdue
+                                  ? Colors.red
+                                  : const Color(0xFF1E3A8A),
+                            ),
+                          ),
+                          Text(
+                            '${localizedUiText(context, 'Due')}: ${DateFormat('dd MMM').format(nextEMI.dueDate)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+              if (constraints.maxWidth < 480) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    progressContent,
+                    if (nextEmiCard != null) ...[
+                      const SizedBox(height: 12),
+                      nextEmiCard,
+                    ],
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: progressContent),
+                  if (nextEmiCard != null) ...[
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: constraints.maxWidth * 0.36,
+                      child: nextEmiCard,
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
           if (loan.status == 'active') ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             LayoutBuilder(
               builder: (context, constraints) {
                 final isNarrow = constraints.maxWidth < 360;
                 if (isNarrow) {
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      OutlinedButton.icon(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => EMIPaymentScreen(loan: loan)),
-                        ).then((_) => _loadLoans()),
-                        icon: const Icon(Icons.payment_rounded, size: 18),
-                        label: Text('Pay EMI', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF1E3A8A),
-                          side: const BorderSide(color: Color(0xFF1E3A8A)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => EMIPaymentScreen(loan: loan)),
+                          ).then((_) => _loadLoans()),
+                          icon: const Icon(Icons.payment_rounded, size: 18),
+                          label: Text('Pay EMI', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1E3A8A),
+                            side: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            minimumSize: const Size.fromHeight(52),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => AllPDFsScreen(loanId: loan.id)),
-                        ),
-                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                        label: Text('View PDF', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E3A8A),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => AllPDFsScreen(loanId: loan.id)),
+                          ),
+                          icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                          label: Text('View PDF', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E3A8A),
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            minimumSize: const Size.fromHeight(52),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
                       ),
                     ],
@@ -448,8 +567,9 @@ class _LoansListScreenState extends State<LoansListScreen> {
                         label: Text('Pay EMI', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF1E3A8A),
-                          side: const BorderSide(color: Color(0xFF1E3A8A)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          minimumSize: const Size.fromHeight(52),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
@@ -465,7 +585,10 @@ class _LoansListScreenState extends State<LoansListScreen> {
                         label: Text('View PDF', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1E3A8A),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          minimumSize: const Size.fromHeight(52),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
@@ -487,14 +610,14 @@ class _LoansListScreenState extends State<LoansListScreen> {
         Icon(icon, size: 18, color: const Color(0xFF1E3A8A)),
         const SizedBox(height: 4),
         Text(
-          label,
+          localizedUiText(context, label),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[600]),
         ),
         Text(
           value,
-          maxLines: 1,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF1E3A8A)),
         ),

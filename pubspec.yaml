@@ -76,6 +76,32 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    - lib/l10n/app_en.arb
+    - lib/l10n/app_as.arb
+    - lib/l10n/app_bn.arb
+    - lib/l10n/app_gu.arb
+    - lib/l10n/app_hi.arb
+    - lib/l10n/app_kn.arb
+    - lib/l10n/app_ml.arb
+    - lib/l10n/app_mr.arb
+    - lib/l10n/app_ne.arb
+    - lib/l10n/app_or.arb
+    - lib/l10n/app_pa.arb
+    - lib/l10n/app_ta.arb
+    - lib/l10n/app_te.arb
+    - lib/l10n/app_ur.arb
+    - assets/fonts/NotoSansArabic-Regular.ttf
+    - assets/fonts/NotoSansBengali-Regular.ttf
+    - assets/fonts/NotoSansDevanagari-Regular.ttf
+    - assets/fonts/NotoSansGujarati-Regular.ttf
+    - assets/fonts/NotoSansGurmukhi-Regular.ttf
+    - assets/fonts/NotoSansKannada-Regular.ttf
+    - assets/fonts/NotoSansMalayalam-Regular.ttf
+    - assets/fonts/NotoSansOriya-Regular.ttf
+    - assets/fonts/NotoSansTamil-Regular.ttf
+    - assets/fonts/NotoSansTelugu-Regular.ttf
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
