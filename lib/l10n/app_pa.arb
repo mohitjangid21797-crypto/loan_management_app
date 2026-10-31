@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "ਵਿਆਜ ਦਰ",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "ਸਾਲਾਨਾ",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "ਮਿਆਦ",
   "@tenureLabelFull": {},
   "interestTypeLabel": "ਵਿਆਜ ਦੀ ਕਿਸਮ",

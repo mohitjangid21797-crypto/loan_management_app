@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "ସୁଧ ହାର",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "ବାର୍ଷିକ",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "ଅବଧି",
   "@tenureLabelFull": {},
   "interestTypeLabel": "ସୁଧ ପ୍ରକାର",

@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "વ્યાજ દર",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "વાર્ષિક",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "મુદત",
   "@tenureLabelFull": {},
   "interestTypeLabel": "વ્યાજ પ્રકાર",

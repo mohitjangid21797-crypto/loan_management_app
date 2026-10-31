@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "പലിശ നിരക്ക്",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "പ്രതിവർഷം",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "കാലാവധി",
   "@tenureLabelFull": {},
   "interestTypeLabel": "പലിശ തരം",

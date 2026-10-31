@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "வட்டி விகிதம்",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "ஆண்டுக்கு",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "காலம்",
   "@tenureLabelFull": {},
   "interestTypeLabel": "வட்டி வகை",

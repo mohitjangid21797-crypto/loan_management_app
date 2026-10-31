@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "সুদৰ হাৰ",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "প্ৰতি বছৰে",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "ম্যাদ",
   "@tenureLabelFull": {},
   "interestTypeLabel": "সুদৰ প্ৰকাৰ",

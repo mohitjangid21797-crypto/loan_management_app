@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "سود کی شرح",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "سالانہ",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "مدت",
   "@tenureLabelFull": {},
   "interestTypeLabel": "سود کی قسم",

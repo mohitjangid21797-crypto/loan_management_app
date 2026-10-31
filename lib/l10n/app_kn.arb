@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "ಬಡ್ಡಿ ದರ",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "ವಾರ್ಷಿಕ",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "ಅವಧಿ",
   "@tenureLabelFull": {},
   "interestTypeLabel": "ಬಡ್ಡಿ ಪ್ರಕಾರ",

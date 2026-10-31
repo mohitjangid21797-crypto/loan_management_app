@@ -546,6 +546,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "সুদের হার",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "প্রতি বছর",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "মেয়াদ",
   "@tenureLabelFull": {},
   "interestTypeLabel": "সুদের ধরন",

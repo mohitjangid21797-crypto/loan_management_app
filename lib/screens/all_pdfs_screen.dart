@@ -1,15 +1,16 @@
+import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/index.dart';
+import '../providers/app_locale_provider.dart';
 import '../providers/app_provider.dart';
 import '../utils/pdf_generator.dart';
 import '../widgets/common_widgets.dart';
@@ -67,7 +68,7 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
 
       final output = await getTemporaryDirectory();
       final file = File('${output.path}/${document.fileName}');
-      await file.writeAsBytes(await pdf.save());
+      await file.writeAsBytes(pdf);
 
       final updatedDocument = document.copyWith(filePath: file.path);
       await provider.addDocument(updatedDocument);
@@ -76,7 +77,6 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
         setState(() => _isLoading = false);
         _showPDFOptions(document, file, pdf);
       }
-
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -112,30 +112,37 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
       'te': 'Telugu',
       'ur': 'Urdu',
     };
-    final options = <String, String>{
-      'en': 'English',
-      'hi': 'Hindi',
-    };
-    if (appLanguageCode != 'en' && appLanguageCode != 'hi') {
-      options[appLanguageCode] =
-          'Use selected app language (${languageNames[appLanguageCode] ?? appLanguageCode})';
-    }
+    final options = AppLocaleProvider.supportedLanguageCodes.map(
+      (code) => MapEntry(
+        code,
+        code == appLanguageCode
+            ? '${languageNames[code]!} (Current app language)'
+            : languageNames[code]!,
+      ),
+    );
 
     return showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Choose PDF language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: options.entries
-              .map(
-                (option) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(option.value),
-                  onTap: () => Navigator.pop(dialogContext, option.key),
-                ),
-              )
-              .toList(),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.6,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: options
+                  .map(
+                    (option) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(option.value),
+                      onTap: () => Navigator.pop(dialogContext, option.key),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
         ),
         actions: [
           TextButton(
@@ -147,7 +154,7 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
     );
   }
 
-  void _showPDFOptions(LoanDocument document, File file, pw.Document pdf) {
+  void _showPDFOptions(LoanDocument document, File file, Uint8List pdf) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -283,8 +290,8 @@ class _AllPDFsScreenState extends State<AllPDFsScreen> {
     );
   }
 
-  Future<void> _viewPDF(pw.Document pdf) async {
-    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  Future<void> _viewPDF(Uint8List pdf) async {
+    await Printing.layoutPdf(onLayout: (format) async => pdf);
   }
 
   Future<void> _sharePDF(File file) async {

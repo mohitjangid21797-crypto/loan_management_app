@@ -590,6 +590,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "ब्याज दर",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "प्रति वर्ष",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "ऋण की अवधि",
   "@tenureLabelFull": {},
   "interestTypeLabel": "ब्याज का प्रकार",

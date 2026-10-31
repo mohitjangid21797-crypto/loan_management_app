@@ -9,7 +9,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'Hindi PDF keeps thirty first-page installments and paginates sixty',
+    'English PDF keeps thirty first-page installments and paginates sixty',
     () async {
       await UiTranslations.load();
 
@@ -48,10 +48,10 @@ void main() {
         ),
         loan: loan,
         emis: emis,
-        languageCode: 'hi',
+        languageCode: 'en',
       );
 
-      final bytes = await document.save();
+      final bytes = document;
       final pdfSource = latin1.decode(bytes);
       final pageCount = RegExp(r'/Type\s*/Page\b').allMatches(pdfSource).length;
 

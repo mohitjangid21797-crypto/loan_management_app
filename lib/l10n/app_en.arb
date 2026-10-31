@@ -590,6 +590,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "Interest Rate",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "p.a.",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "Tenure",
   "@tenureLabelFull": {},
   "interestTypeLabel": "Interest Type",

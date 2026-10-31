@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "వడ్డీ రేటు",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "సంవత్సరానికి",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "కాలవ్యవధి",
   "@tenureLabelFull": {},
   "interestTypeLabel": "వడ్డీ రకం",

@@ -532,6 +532,8 @@
   "@principalAmountLabel": {},
   "interestRateLabelFull": "व्याज दर",
   "@interestRateLabelFull": {},
+  "annualRateSuffix": "प्रति वर्ष",
+  "@annualRateSuffix": {},
   "tenureLabelFull": "मुदत",
   "@tenureLabelFull": {},
   "interestTypeLabel": "व्याज प्रकार",

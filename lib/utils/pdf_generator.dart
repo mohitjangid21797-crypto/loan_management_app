@@ -1,20 +1,24 @@
+import 'dart:typed_data';
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/services.dart';
 
+import 'indic_pdf_generator.dart';
 import '../l10n/ui_translations.dart';
 import '../models/index.dart';
 
 class PDFGenerator {
-  static final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'en_IN',
-    symbol: 'Rs. ',
-    decimalDigits: 2,
-  );
+  static NumberFormat _currencyFormat(String languageCode) =>
+      NumberFormat.currency(
+        locale: 'en_IN',
+        symbol: '${_translateKey(languageCode, 'currencySymbol')} ',
+        decimalDigits: 2,
+      );
 
-  static Future<pw.Document> generateLoanAgreement({
+  static Future<Uint8List> generateLoanAgreement({
     required Lender lender,
     required Customer customer,
     required Loan loan,
@@ -22,6 +26,16 @@ class PDFGenerator {
     required String languageCode,
   }) async {
     await initializeDateFormatting(languageCode);
+    if (IndicPdfGenerator.supportsLanguage(languageCode)) {
+      return IndicPdfGenerator.generateLoanAgreement(
+        lender: lender,
+        customer: customer,
+        loan: loan,
+        emis: emis,
+        languageCode: languageCode,
+      );
+    }
+
     final font = await _loadFont(languageCode);
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
@@ -115,8 +129,11 @@ class PDFGenerator {
       ),
     );
 
-    return pdf;
+    return pdf.save();
   }
+
+  static String monthNameFor(String languageCode, int month) =>
+      IndicPdfGenerator.monthNameFor(languageCode, month);
 
   static String _translateKey(String languageCode, String key) =>
       UiTranslations.translateKey(languageCode, key);
@@ -142,11 +159,11 @@ class PDFGenerator {
     return pw.Font.ttf(data);
   }
 
-  static DateFormat _dateFormat(String languageCode) =>
-      DateFormat('dd MMM yyyy', languageCode);
+  static String _formatDate(DateTime date, String languageCode) =>
+      IndicPdfGenerator.formatDate(date, languageCode);
 
-  static DateFormat _dateTimeFormat(String languageCode) =>
-      DateFormat('dd MMM yyyy, hh:mm a', languageCode);
+  static String _formatDateTime(DateTime date, String languageCode) =>
+      IndicPdfGenerator.formatDateTime(date, languageCode);
 
   static pw.Widget _buildHeader(
     Lender lender,
@@ -187,7 +204,7 @@ class PDFGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
               pw.Text(
-                '${_translateKey(languageCode, 'generatedLabel')}: ${_dateTimeFormat(languageCode).format(DateTime.now())}',
+                '${_translateKey(languageCode, 'generatedLabel')}: ${_formatDateTime(DateTime.now(), languageCode)}',
                 style: pw.TextStyle(
                   fontSize: compact ? 8 : 10,
                   color: PdfColors.grey100,
@@ -352,9 +369,9 @@ class PDFGenerator {
           children: [
             _buildTableRow(
               'principalAmountLabel',
-              _currencyFormat.format(loan.principalAmount),
+              _currencyFormat(languageCode).format(loan.principalAmount),
               'interestRateLabelFull',
-              '${loan.interestRate}% p.a.',
+              '${loan.interestRate}% ${_translateKey(languageCode, 'annualRateSuffix')}',
               languageCode,
               compact: compact,
             ),
@@ -368,17 +385,17 @@ class PDFGenerator {
             ),
             _buildTableRow(
               'startDateLabel',
-              _dateFormat(languageCode).format(loan.startDate),
+              _formatDate(loan.startDate, languageCode),
               'monthlyEmiLabel',
-              _currencyFormat.format(loan.monthlyEMI),
+              _currencyFormat(languageCode).format(loan.monthlyEMI),
               languageCode,
               compact: compact,
             ),
             _buildTableRow(
               'totalInterestLabel',
-              _currencyFormat.format(loan.totalInterest),
+              _currencyFormat(languageCode).format(loan.totalInterest),
               'totalPayableLabel',
-              _currencyFormat.format(loan.totalAmount),
+              _currencyFormat(languageCode).format(loan.totalAmount),
               languageCode,
               compact: compact,
             ),
@@ -500,10 +517,13 @@ class PDFGenerator {
             children: [
               _tableCell(emi.installmentNumber.toString(), compact: compact),
               _tableCell(
-                _dateFormat(languageCode).format(emi.dueDate),
+                _formatDate(emi.dueDate, languageCode),
                 compact: compact,
               ),
-              _tableCell(_currencyFormat.format(emi.amount), compact: compact),
+              _tableCell(
+                _currencyFormat(languageCode).format(emi.amount),
+                compact: compact,
+              ),
               _tableCell(
                 _translateKey(languageCode, switch (emi.status) {
                   EMIStatus.paid => 'emiPaid',
@@ -519,7 +539,7 @@ class PDFGenerator {
               ),
               _tableCell(
                 emi.paidDate != null
-                    ? _dateFormat(languageCode).format(emi.paidDate!)
+                    ? _formatDate(emi.paidDate!, languageCode)
                     : '-',
                 compact: compact,
               ),
@@ -622,19 +642,19 @@ class PDFGenerator {
             children: [
               _buildSummaryItem(
                 'totalPaidLabel',
-                _currencyFormat.format(totalPaid),
+                _currencyFormat(languageCode).format(totalPaid),
                 languageCode,
                 isHighlight: true,
               ),
               _buildSummaryItem(
                 'totalPendingLabel',
-                _currencyFormat.format(totalPending),
+                _currencyFormat(languageCode).format(totalPending),
                 languageCode,
                 isHighlight: true,
               ),
               _buildSummaryItem(
                 'totalLoanLabel',
-                _currencyFormat.format(loan.totalAmount),
+                _currencyFormat(languageCode).format(loan.totalAmount),
                 languageCode,
                 isHighlight: true,
               ),
@@ -705,7 +725,7 @@ class PDFGenerator {
                 ),
               ),
               pw.Text(
-                '${_translateKey(languageCode, 'dateLabel')}: ${_dateFormat(languageCode).format(DateTime.now())}',
+                '${_translateKey(languageCode, 'dateLabel')}: ${_formatDate(DateTime.now(), languageCode)}',
                 style: const pw.TextStyle(
                   fontSize: 8,
                   color: PdfColors.grey600,
@@ -742,7 +762,7 @@ class PDFGenerator {
                 ),
               ),
               pw.Text(
-                '${_translateKey(languageCode, 'dateLabel')}: ${_dateFormat(languageCode).format(DateTime.now())}',
+                '${_translateKey(languageCode, 'dateLabel')}: ${_formatDate(DateTime.now(), languageCode)}',
                 style: const pw.TextStyle(
                   fontSize: 8,
                   color: PdfColors.grey600,
