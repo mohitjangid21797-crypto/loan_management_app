@@ -58,9 +58,20 @@ class IndicPdfGenerator {
     'दिसंबर',
   ];
 
+  static const _htmlConversionTimeout = Duration(seconds: 20);
+  static const _htmlCapabilityTimeout = Duration(seconds: 5);
+  static final _monthNamesByLanguage = <String, List<String>>{};
+  static final _dateFormatsByLanguage = <String, DateFormat>{};
+  static final _yearFormatsByLanguage = <String, DateFormat>{};
+  static final _timeFormatsByLanguage = <String, DateFormat>{};
+  static final _fontBase64ByLanguage = <String, Future<String>>{};
+
   @visibleForTesting
   static Future<Uint8List> Function(String html, PdfPageFormat format)?
   htmlConverterForTesting;
+
+  @visibleForTesting
+  static Future<bool> Function()? htmlCapabilityForTesting;
 
   static bool supportsLanguage(String languageCode) =>
       _fontAssets.containsKey(languageCode);
@@ -69,19 +80,34 @@ class IndicPdfGenerator {
     if (month < 1 || month > 12) {
       throw ArgumentError.value(month, 'month', 'Must be between 1 and 12');
     }
-    if (languageCode == 'hi') return _hindiMonths[month - 1];
-    return DateFormat('MMMM', languageCode).format(DateTime(2000, month, 1));
+    final months = _monthNamesByLanguage.putIfAbsent(
+      languageCode,
+      () => languageCode == 'hi'
+          ? _hindiMonths
+          : List.generate(
+              12,
+              (index) => DateFormat(
+                'MMMM',
+                languageCode,
+              ).format(DateTime(2000, index + 1, 1)),
+            ),
+    );
+    return months[month - 1];
   }
 
   static String formatDate(DateTime date, String languageCode) {
-    final day = DateFormat('dd', languageCode).format(date);
-    final year = DateFormat('yyyy', languageCode).format(date);
+    final day = _dateFormatsByLanguage
+        .putIfAbsent(languageCode, () => DateFormat('dd', languageCode))
+        .format(date);
+    final year = _yearFormatsByLanguage
+        .putIfAbsent(languageCode, () => DateFormat('yyyy', languageCode))
+        .format(date);
     return '$day ${monthNameFor(languageCode, date.month)} $year';
   }
 
   static String formatDateTime(DateTime date, String languageCode) =>
       '${formatDate(date, languageCode)}, '
-      '${DateFormat('hh:mm a', languageCode).format(date)}';
+      '${_timeFormatsByLanguage.putIfAbsent(languageCode, () => DateFormat('hh:mm a', languageCode)).format(date)}';
 
   static Future<Uint8List> generateLoanAgreement({
     required Lender lender,
@@ -93,6 +119,20 @@ class IndicPdfGenerator {
     await initializeDateFormatting(languageCode);
     final sortedEmis = List<EMI>.of(emis)
       ..sort((a, b) => a.installmentNumber.compareTo(b.installmentNumber));
+
+    late final bool canConvertHtml;
+    try {
+      canConvertHtml = await _canConvertHtml().timeout(_htmlCapabilityTimeout);
+    } on Object {
+      return _generateRasterFallback(
+        lender: lender,
+        customer: customer,
+        loan: loan,
+        emis: sortedEmis,
+        languageCode: languageCode,
+      );
+    }
+
     final html = await buildHtml(
       lender: lender,
       customer: customer,
@@ -100,6 +140,16 @@ class IndicPdfGenerator {
       emis: sortedEmis,
       languageCode: languageCode,
     );
+
+    if (!canConvertHtml) {
+      return _generateRasterFallback(
+        lender: lender,
+        customer: customer,
+        loan: loan,
+        emis: sortedEmis,
+        languageCode: languageCode,
+      );
+    }
 
     try {
       final bytes = await _convertHtml(html);
@@ -145,12 +195,17 @@ class IndicPdfGenerator {
         'No complex-script PDF font is configured',
       );
     }
-    final fontData = await rootBundle.load(font.$2);
-    final fontBase64 = base64Encode(
-      fontData.buffer.asUint8List(
-        fontData.offsetInBytes,
-        fontData.lengthInBytes,
-      ),
+    final fontBase64 = await _fontBase64ByLanguage.putIfAbsent(
+      languageCode,
+      () async {
+        final fontData = await rootBundle.load(font.$2);
+        return base64Encode(
+          fontData.buffer.asUint8List(
+            fontData.offsetInBytes,
+            fontData.lengthInBytes,
+          ),
+        );
+      },
     );
     final isRtl = languageCode == 'ur';
     final direction = isRtl ? 'rtl' : 'ltr';
@@ -364,12 +419,24 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
   static Future<Uint8List> _convertHtml(String html) {
     final testConverter = htmlConverterForTesting;
     if (testConverter != null) {
-      return testConverter(html, PdfPageFormat.a4);
+      return testConverter(
+        html,
+        PdfPageFormat.a4,
+      ).timeout(_htmlConversionTimeout);
     }
     // The requested HTML renderer is deprecated upstream but is needed here
     // for Chromium shaping of Indic scripts.
     // ignore: deprecated_member_use
-    return Printing.convertHtml(html: html, format: PdfPageFormat.a4);
+    return Printing.convertHtml(
+      html: html,
+      format: PdfPageFormat.a4,
+    ).timeout(_htmlConversionTimeout);
+  }
+
+  static Future<bool> _canConvertHtml() async {
+    final testCapability = htmlCapabilityForTesting;
+    if (testCapability != null) return testCapability();
+    return (await Printing.info()).canConvertHtml;
   }
 
   static Future<Uint8List> _generateRasterFallback({
@@ -380,7 +447,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
     required String languageCode,
   }) async {
     const firstPageRows = 14;
-    const followingPageRows = 30;
+    const followingPageRows = 40;
     final document = pw.Document();
     final firstRows = emis.take(firstPageRows).toList();
     final remainingRows = emis.skip(firstRows.length).toList();

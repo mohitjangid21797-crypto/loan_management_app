@@ -53,6 +53,7 @@ void main() {
         dueDate: DateTime(2026, 3 + index, 1),
       ),
     );
+    IndicPdfGenerator.htmlCapabilityForTesting = () async => true;
     IndicPdfGenerator.htmlConverterForTesting = (html, format) async {
       expect(format, PdfPageFormat.a4);
       expect(html, contains('page-break-inside:avoid'));
@@ -67,6 +68,7 @@ void main() {
 
   tearDown(() {
     IndicPdfGenerator.htmlConverterForTesting = null;
+    IndicPdfGenerator.htmlCapabilityForTesting = null;
   });
 
   test('returns a non-empty PDF for every supported language', () async {
@@ -149,4 +151,22 @@ void main() {
       expect(String.fromCharCodes(bytes.take(4)), '%PDF');
     },
   );
+
+  test('skips HTML conversion when the platform does not support it', () async {
+    IndicPdfGenerator.htmlCapabilityForTesting = () async => false;
+    IndicPdfGenerator.htmlConverterForTesting = (_, _) async {
+      fail('HTML conversion must not run when platform support is false');
+    };
+
+    final bytes = await PDFGenerator.generateLoanAgreement(
+      lender: lender,
+      customer: customer,
+      loan: loan,
+      emis: emis.take(1).toList(),
+      languageCode: 'hi',
+    );
+
+    expect(bytes, isNotEmpty);
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
 }
