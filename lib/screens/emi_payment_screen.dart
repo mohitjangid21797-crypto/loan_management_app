@@ -240,15 +240,15 @@ class _EMIPaymentScreenState extends State<EMIPaymentScreen> {
     final overdueEMIs = _emis.where((e) => e.isOverdue).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'EMI Payments',
           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.pop(context),

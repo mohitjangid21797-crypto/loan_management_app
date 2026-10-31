@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
+import '../providers/app_theme_provider.dart';
 import '../screens/language_selection_screen.dart';
 import '../services/backup_service.dart';
 import '../widgets/common_widgets.dart';
@@ -51,7 +52,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _signInAndBackup() async {
     final signedIn = await _backupService.signIn();
     if (!signedIn) {
-      if (mounted) _showSnackBar('Failed to sign in to Google', isError: true);
+      if (mounted) {
+        _showSnackBar(
+          _signInFailureMessage,
+          isError: true,
+        );
+      }
       return;
     }
 
@@ -63,13 +69,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _signInAndRestore() async {
     final signedIn = await _backupService.signIn();
     if (!signedIn) {
-      if (mounted) _showSnackBar('Failed to sign in to Google', isError: true);
+      if (mounted) {
+        _showSnackBar(
+          _signInFailureMessage,
+          isError: true,
+        );
+      }
       return;
     }
 
     if (mounted) {
       _showBackupPasswordDialog(isBackup: false);
     }
+  }
+
+  String get _signInFailureMessage {
+    final error = _backupService.lastSignInError;
+    if (error == null || error.isEmpty) {
+      return 'Google sign-in failed. Check your Google account and OAuth configuration.';
+    }
+    return 'Google sign-in failed: $error';
   }
 
   void _showBackupPasswordDialog({required bool isBackup}) {
@@ -290,10 +309,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    final success = await _backupService.restoreFromPackage(
-      provider,
-      decryptedData,
-    );
+    final success = await _backupService.restoreBackup(provider, decryptedData);
 
     if (mounted) {
       setState(() => _isRestoring = false);
@@ -329,16 +345,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<AppThemeProvider>();
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Settings',
           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         leading: widget.onClose != null
             ? IconButton(
                 icon: const Icon(Icons.close_rounded),
@@ -599,75 +617,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 32),
 
-                _buildSectionHeader('Security Notes', Icons.security_rounded),
+                _buildSectionHeader('Appearance', Icons.palette_outlined),
                 const SizedBox(height: 16),
 
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSecurityItem(
-                        '🔐 End-to-End Encryption',
-                        'Your data is encrypted with AES-256-GCM on your device before upload. The key is derived from your password using PBKDF2 (200,000 rounds).',
+                      Text(
+                        'App Theme',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
                       ),
-                      _buildSecurityItem(
-                        '🔑 Password Not Stored',
-                        'The app never stores your backup password. If you forget it, your backup CANNOT be decrypted. Not by you, not by Google, not by us.',
-                      ),
-                      _buildSecurityItem(
-                        '☁️ Hidden App Data Folder',
-                        'Backups go to Google Drive\'s hidden "app data" folder. You cannot see them in Drive, and no other app can access them.',
-                      ),
-                      _buildSecurityItem(
-                        '📦 LMBK Format',
-                        'Backups use custom LMBK format: magic bytes + version + salt + IV + encrypted data + auth tag.',
-                      ),
-                      _buildSecurityItem(
-                        '🔢 Max 5 Backups',
-                        'Only the 5 most recent backups are kept. Older ones are auto-deleted.',
-                      ),
-                      _buildSecurityItem(
-                        '🚫 M-PIN Not Backed Up',
-                        'Your M-PIN is deliberately excluded from backups. After restore, you must set a new M-PIN.',
-                      ),
-                      _buildSecurityItem(
-                        '🌐 Online Only',
-                        'Backup/restore require internet. The rest of the app works fully offline.',
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                _buildSectionHeader(
-                  'App Information',
-                  Icons.info_outline_rounded,
-                ),
-                const SizedBox(height: 16),
-
-                AppCard(
-                  child: Column(
-                    children: [
-                      _buildInfoRow('App Version', '1.0.0'),
-                      const Divider(height: 1),
-                      _buildInfoRow(
-                        'Data Storage',
-                        'Local (SharedPreferences)',
-                      ),
-                      const Divider(height: 1),
-                      _buildInfoRow('Backup Format', 'LMBK v1 (AES-256-GCM)'),
-                      const Divider(height: 1),
-                      _buildInfoRow(
-                        'Backup Location',
-                        'Google Drive App Data Folder',
-                      ),
-                      const Divider(height: 1),
-                      _buildInfoRow(
-                        'Last Backup',
-                        _backups.isNotEmpty
-                            ? _formatDate(_backups.first['createdTime'])
-                            : 'Never',
+                      const SizedBox(height: 12),
+                      SegmentedButton<ThemeMode>(
+                        segments: const [
+                          ButtonSegment(
+                            value: ThemeMode.light,
+                            icon: Icon(Icons.light_mode_outlined),
+                            label: Text('Light'),
+                          ),
+                          ButtonSegment(
+                            value: ThemeMode.dark,
+                            icon: Icon(Icons.dark_mode_outlined),
+                            label: Text('Dark'),
+                          ),
+                        ],
+                        selected: {themeProvider.themeMode},
+                        onSelectionChanged: (selection) =>
+                            _setThemeMode(selection.first),
                       ),
                     ],
                   ),
@@ -686,13 +667,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         leading: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E3A8A)
-                                .withValues(alpha: 0.1),
+                            color: colorScheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.language_rounded,
-                            color: Color(0xFF1E3A8A),
+                            color: colorScheme.primary,
                             size: 24,
                           ),
                         ),
@@ -701,14 +681,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1E3A8A),
+                            color: colorScheme.primary,
                           ),
                         ),
                         subtitle: Text(
                           'Choose your preferred language',
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                         trailing: const Icon(
@@ -743,16 +723,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _setThemeMode(ThemeMode mode) async {
+    try {
+      await context.read<AppThemeProvider>().setThemeMode(mode);
+    } catch (error) {
+      if (mounted) {
+        _showSnackBar('Could not change app theme: $error', isError: true);
+      }
+    }
+  }
+
   Widget _buildSectionHeader(String title, IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
+            color: colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: const Color(0xFF1E3A8A), size: 20),
+          child: Icon(icon, color: colorScheme.primary, size: 20),
         ),
         const SizedBox(width: 12),
         Text(
@@ -760,53 +751,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF1E3A8A),
+            color: colorScheme.primary,
           ),
         ),
       ],
     ).animate().fadeIn(duration: 500.ms).slideX(begin: -0.3);
   }
 
-  Widget _buildSecurityItem(String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E3A8A),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Colors.grey[600],
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBackupItem(Map<String, dynamic> backup) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
-          Icon(Icons.lock_rounded, color: const Color(0xFF1E3A8A), size: 20),
+          Icon(Icons.lock_rounded, color: colorScheme.primary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -817,7 +781,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1E3A8A),
+                    color: colorScheme.primary,
                   ),
                 ),
                 Text(
@@ -837,29 +801,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.2);
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF1E3A8A),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatDate(String? dateString) {

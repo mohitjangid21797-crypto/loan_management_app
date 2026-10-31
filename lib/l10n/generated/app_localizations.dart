@@ -1307,13 +1307,13 @@ abstract class AppLocalizations {
   /// No description provided for @localStorage.
   ///
   /// In en, this message translates to:
-  /// **'Local (SharedPreferences)'**
+  /// **'Local (SQLite database)'**
   String get localStorage;
 
   /// No description provided for @backupFormatDesc.
   ///
   /// In en, this message translates to:
-  /// **'LMBK v1 (AES-256-GCM)'**
+  /// **'LMBK v2 (AES-256-GCM)'**
   String get backupFormatDesc;
 
   /// No description provided for @backupLocationDesc.
@@ -1832,6 +1832,12 @@ abstract class AppLocalizations {
   /// **'Interest Rate'**
   String get interestRateLabelFull;
 
+  /// No description provided for @annualRateSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'p.a.'**
+  String get annualRateSuffix;
+
   /// No description provided for @tenureLabelFull.
   ///
   /// In en, this message translates to:
@@ -2131,6 +2137,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save'**
   String get save;
+
+  /// No description provided for @officeAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Office Address'**
+  String get officeAddress;
+
+  /// No description provided for @licenseNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'License Number'**
+  String get licenseNumber;
 
   /// No description provided for @saveChanges.
   ///

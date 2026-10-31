@@ -9,7 +9,8 @@ import '../models/index.dart';
 import '../providers/app_provider.dart';
 
 class LMBKHeader {
-  static const int formatVersion = 1;
+  static const int legacyFormatVersion = 1;
+  static const int formatVersion = 2;
   static const int saltLength = 32;
   static const int ivLength = 12;
   static const int tagLength = 16;
@@ -35,16 +36,19 @@ class LMBKHeader {
   }
 
   static LMBKHeader? fromBytes(Uint8List bytes) {
-    if (bytes.length < 4 + 1 + saltLength + ivLength) return null;
-    
+    if (bytes.length < headerLength) return null;
+
     final magicBytes = bytes.sublist(0, 4);
     final magicStr = String.fromCharCodes(magicBytes);
     if (magicStr != magic) return null;
 
     final version = bytes[4];
+    if (version != legacyFormatVersion && version != formatVersion) {
+      return null;
+    }
     final salt = bytes.sublist(5, 5 + saltLength);
     final iv = bytes.sublist(5 + saltLength, 5 + saltLength + ivLength);
-    
+
     return LMBKHeader(version: version, salt: salt, iv: iv);
   }
 
@@ -56,8 +60,11 @@ class BackupService {
   static const int keyLength = 32;
   static const int maxBackups = 5;
   static const String appDataFolderName = 'appDataFolder';
+  static const String googleServerClientId =
+      '773939013768-s1f118anigoq5njai293crtfonrjp6g1.apps.googleusercontent.com';
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: googleServerClientId,
     scopes: [
       'email',
       'https://www.googleapis.com/auth/drive.appdata',
@@ -67,72 +74,101 @@ class BackupService {
   GoogleSignInAccount? _currentUser;
   drive.DriveApi? _driveApi;
   http.BaseClient? _authClient;
+  String? _lastSignInError;
 
   GoogleSignInAccount? get currentUser => _currentUser;
   bool get isSignedIn => _currentUser != null;
+  String? get lastSignInError => _lastSignInError;
 
   Future<bool> signIn() async {
+    _lastSignInError = null;
     try {
-      _currentUser = await _googleSignIn.signIn();
-      if (_currentUser == null) return false;
+      final user = await _googleSignIn.signIn();
+      if (user == null) {
+        _lastSignInError = 'Google sign-in was cancelled.';
+        return false;
+      }
 
-      final headers = await _currentUser!.authHeaders;
-      _authClient = _GoogleAuthClient(headers);
-      _driveApi = drive.DriveApi(_authClient!);
+      final headers = await user.authHeaders;
+      final authClient = _GoogleAuthClient(headers);
+      final driveApi = drive.DriveApi(authClient);
+      _authClient?.close();
+      _currentUser = user;
+      _authClient = authClient;
+      _driveApi = driveApi;
       return true;
     } catch (e) {
+      _lastSignInError = _describeSignInError(e);
+      _currentUser = null;
+      _driveApi = null;
+      _authClient?.close();
+      _authClient = null;
       return false;
     }
   }
 
+  String _describeSignInError(Object error) {
+    final details = error.toString();
+    if (RegExp(r'(?:ApiException:\s*|v1:)\s*10(?:\D|$)').hasMatch(details)) {
+      return 'Google OAuth error 10: register an Android OAuth client in the '
+          'same Google Cloud project for package '
+          'com.example.loan_management_app and the signing certificate SHA-1 '
+          'used by this build. Keep the Web client ID configured as the '
+          'server client ID.';
+    }
+    return details;
+  }
+
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    _currentUser = null;
-    _driveApi = null;
-    _authClient?.close();
-    _authClient = null;
+    _lastSignInError = null;
+    try {
+      await _googleSignIn.signOut();
+    } finally {
+      _currentUser = null;
+      _driveApi = null;
+      _authClient?.close();
+      _authClient = null;
+    }
   }
 
   Uint8List _deriveKey(String password, Uint8List salt) {
+    final passwordBytes = Uint8List.fromList(utf8.encode(password));
+    return _deriveKeyWithPasswordBytes(passwordBytes, salt);
+  }
+
+  Uint8List _deriveLegacyKey(String password, Uint8List salt) {
+    final passwordBytes = Uint8List.fromList(password.codeUnits);
+    return _deriveKeyWithPasswordBytes(passwordBytes, salt, legacy: true);
+  }
+
+  Uint8List _deriveKeyWithPasswordBytes(
+    Uint8List passwordBytes,
+    Uint8List salt, {
+    bool legacy = false,
+  }) {
     final hmac = HMac(SHA256Digest(), 64);
-    final key = Uint8List(keyLength);
-    
-    var block = 1;
-    var offset = 0;
-    
-    while (offset < keyLength) {
-      final blockBytes = Uint8List(4)
-        ..[0] = (block >> 24) & 0xFF
-        ..[1] = (block >> 16) & 0xFF
-        ..[2] = (block >> 8) & 0xFF
-        ..[3] = block & 0xFF;
-      
-      final data = BytesBuilder()
-        ..add(salt)
-        ..add(blockBytes)
-        ..toBytes();
-      
-      hmac.init(KeyParameter(Uint8List.fromList(password.codeUnits)));
-      final u = hmac.process(data.toBytes());
-      
-      var t = Uint8List.fromList(u);
-      
-      for (var i = 1; i < pbkdf2Iterations; i++) {
-        hmac.init(KeyParameter(t));
-        final u2 = hmac.process(Uint8List.fromList(password.codeUnits));
-        for (var j = 0; j < u2.length; j++) {
-          t[j] ^= u2[j];
-        }
+    hmac.init(KeyParameter(passwordBytes));
+    final blockBytes = Uint8List(4)..[3] = 1;
+    final firstInput = BytesBuilder()
+      ..add(salt)
+      ..add(blockBytes);
+    var u = Uint8List.fromList(hmac.process(firstInput.toBytes()));
+    final derivedKey = Uint8List.fromList(u);
+
+    for (var iteration = 1; iteration < pbkdf2Iterations; iteration++) {
+      if (legacy) {
+        hmac.init(KeyParameter(u));
+        u = Uint8List.fromList(hmac.process(passwordBytes));
+      } else {
+        hmac.init(KeyParameter(passwordBytes));
+        u = Uint8List.fromList(hmac.process(u));
       }
-      
-      final remaining = keyLength - offset;
-      final copyLen = remaining < 32 ? remaining : 32;
-      key.setRange(offset, offset + copyLen, t);
-      offset += copyLen;
-      block++;
+      for (var i = 0; i < derivedKey.length; i++) {
+        derivedKey[i] ^= u[i];
+      }
     }
-    
-    return key;
+
+    return Uint8List.fromList(derivedKey.sublist(0, keyLength));
   }
 
   Future<Uint8List> _encryptData(Uint8List data, String password) async {
@@ -158,13 +194,15 @@ class BackupService {
     final header = LMBKHeader.fromBytes(encryptedData);
     if (header == null) return null;
 
-    final keyBytes = _deriveKey(password, header.salt);
-    final key = encrypt.Key(keyBytes);
-    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.gcm));
-    
     final encryptedBytes = encryptedData.sublist(LMBKHeader.headerLength);
     if (encryptedBytes.length < LMBKHeader.tagLength) return null;
-    
+
+    final keyBytes = header.version == LMBKHeader.legacyFormatVersion
+        ? _deriveLegacyKey(password, header.salt)
+        : _deriveKey(password, header.salt);
+    final key = encrypt.Key(keyBytes);
+    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.gcm));
+
     final cipherText = encryptedBytes.sublist(0, encryptedBytes.length - LMBKHeader.tagLength);
     final tag = encryptedBytes.sublist(encryptedBytes.length - LMBKHeader.tagLength);
     
@@ -179,79 +217,33 @@ class BackupService {
     }
   }
 
-  Future<Uint8List> _createBackupPackage(AppProvider provider) async {
-    final backupData = {
-      'version': 1,
-      'timestamp': DateTime.now().toIso8601String(),
-      'lender': provider.lender?.toJson(),
-      'customers': provider.customers.map((c) => c.toJson()).toList(),
-      'loans': provider.loans.map((l) => l.toJson()).toList(),
-      'emis': provider.emis.map((e) => e.toJson()).toList(),
-      'documents': provider.documents.map((d) => d.toJson()).toList(),
-    };
-    
-    final jsonString = jsonEncode(backupData);
-    return utf8.encode(jsonString);
-  }
-
   Future<bool> restoreFromPackage(AppProvider provider, Uint8List data) async {
     try {
       final jsonString = utf8.decode(data);
       final Map<String, dynamic> backup = jsonDecode(jsonString);
       
       if (backup['version'] != 1) return false;
-      
-      if (backup['lender'] != null) {
-        await provider.updateLender(Lender.fromJson(backup['lender']));
-      }
 
-      if (backup['customers'] != null) {
-        for (final c in backup['customers']) {
-          await provider.addCustomer(Customer.fromJson(c));
-        }
-      }
-
-      if (backup['loans'] != null) {
-        for (final l in backup['loans']) {
-          await provider.addLoan(Loan.fromJson(l));
-        }
-      }
-
-      if (backup['emis'] != null) {
-        for (final e in backup['emis']) {
-          provider.emis.add(EMI.fromJson(e));
-        }
-      }
-
-      if (backup['documents'] != null) {
-        for (final d in backup['documents']) {
-          provider.documents.add(LoanDocument.fromJson(d));
-        }
-      }
-      
-      await provider.saveToStorage();
+      await _replaceProviderData(provider, backup);
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  Future<String?> _getAppDataFolderId() async {
-    if (_driveApi == null) return null;
+  Future<bool> restoreBackup(AppProvider provider, Uint8List data) async {
+    if (!_isSqliteDatabase(data)) {
+      return restoreFromPackage(provider, data);
+    }
 
     try {
-      final list = await _driveApi!.files.list(
-        q: "mimeType='application/vnd.google-apps.folder' and name='$appDataFolderName' and trashed=false",
-        spaces: 'appDataFolder',
-      );
-      
-      if (list.files != null && list.files!.isNotEmpty) {
-        return list.files!.first.id;
-      }
-      
-      return null;
+      final state = await provider.database.readBackupState(data);
+      _validateAppState(state);
+      await provider.database.restoreDatabaseFile(data);
+      await provider.reloadFromStorage();
+      return true;
     } catch (e) {
-      return null;
+      return false;
     }
   }
 
@@ -259,16 +251,14 @@ class BackupService {
     if (_driveApi == null || _currentUser == null) return false;
 
     try {
-      final folderId = await _getAppDataFolderId();
-      if (folderId == null) return false;
-
-      final package = await _createBackupPackage(provider);
-      final encrypted = await _encryptData(package, password);
+      await provider.saveToStorage();
+      final databaseFile = await provider.database.exportDatabaseFile();
+      final encrypted = await _encryptData(databaseFile, password);
       
       final fileName = 'backup_${DateTime.now().millisecondsSinceEpoch}.lmbk';
       final file = drive.File()
         ..name = fileName
-        ..parents = [folderId]
+        ..parents = [appDataFolderName]
         ..mimeType = 'application/octet-stream';
 
       final media = drive.Media(
@@ -278,7 +268,7 @@ class BackupService {
 
       await _driveApi!.files.create(file, uploadMedia: media);
       
-      await _cleanupOldBackups(folderId);
+      await _cleanupOldBackups();
       return true;
     } catch (e) {
       return false;
@@ -289,11 +279,8 @@ class BackupService {
     if (_driveApi == null || _currentUser == null) return null;
 
     try {
-      final folderId = await _getAppDataFolderId();
-      if (folderId == null) return null;
-
       final list = await _driveApi!.files.list(
-        q: "'$folderId' in parents and name contains '.lmbk' and trashed=false",
+        q: "name contains '.lmbk' and trashed=false",
         spaces: 'appDataFolder',
         orderBy: 'createdTime desc',
         pageSize: 1,
@@ -307,9 +294,12 @@ class BackupService {
       final media = await _driveApi!.files.get(
         fileId, 
         downloadOptions: drive.DownloadOptions.fullMedia
-      ) as http.StreamedResponse;
-      
-      final bytes = await media.stream.toBytes();
+      ) as drive.Media;
+      final bytesBuilder = BytesBuilder();
+      await for (final chunk in media.stream) {
+        bytesBuilder.add(chunk);
+      }
+      final bytes = bytesBuilder.takeBytes();
       return await _decryptData(bytes, password);
     } catch (e) {
       return null;
@@ -320,11 +310,8 @@ class BackupService {
     if (_driveApi == null) return [];
 
     try {
-      final folderId = await _getAppDataFolderId();
-      if (folderId == null) return [];
-
       final list = await _driveApi!.files.list(
-        q: "'$folderId' in parents and name contains '.lmbk' and trashed=false",
+        q: "name contains '.lmbk' and trashed=false",
         spaces: 'appDataFolder',
         orderBy: 'createdTime desc',
         pageSize: maxBackups,
@@ -343,10 +330,10 @@ class BackupService {
     }
   }
 
-  Future<void> _cleanupOldBackups(String folderId) async {
+  Future<void> _cleanupOldBackups() async {
     try {
       final list = await _driveApi!.files.list(
-        q: "'$folderId' in parents and name contains '.lmbk' and trashed=false",
+        q: "name contains '.lmbk' and trashed=false",
         spaces: 'appDataFolder',
         orderBy: 'createdTime desc',
       );
@@ -361,6 +348,73 @@ class BackupService {
       // Ignore cleanup errors
     }
   }
+
+  bool _isSqliteDatabase(Uint8List bytes) {
+    const signature = 'SQLite format 3\u0000';
+    if (bytes.length < signature.length) return false;
+    return String.fromCharCodes(bytes.sublist(0, signature.length)) ==
+        signature;
+  }
+
+  Future<void> _replaceProviderData(
+    AppProvider provider,
+    Map<String, dynamic> data,
+  ) async {
+    final parsed = _parseAppState(data);
+    await provider.replaceAllData(
+      lender: parsed.lender,
+      customers: parsed.customers,
+      loans: parsed.loans,
+      emis: parsed.emis,
+      documents: parsed.documents,
+    );
+  }
+
+  void _validateAppState(Map<String, dynamic> data) {
+    _parseAppState(data);
+  }
+
+  _BackupAppState _parseAppState(Map<String, dynamic> data) {
+    final lenderData = data['lender'];
+    return _BackupAppState(
+      lender: lenderData == null
+          ? null
+          : Lender.fromJson(Map<String, dynamic>.from(lenderData as Map)),
+      customers: _decodeBackupList(data['customers'], Customer.fromJson),
+      loans: _decodeBackupList(data['loans'], Loan.fromJson),
+      emis: _decodeBackupList(data['emis'], EMI.fromJson),
+      documents: _decodeBackupList(
+        data['documents'],
+        LoanDocument.fromJson,
+      ),
+    );
+  }
+}
+
+class _BackupAppState {
+  final Lender? lender;
+  final List<Customer> customers;
+  final List<Loan> loans;
+  final List<EMI> emis;
+  final List<LoanDocument> documents;
+
+  const _BackupAppState({
+    required this.lender,
+    required this.customers,
+    required this.loans,
+    required this.emis,
+    required this.documents,
+  });
+}
+
+List<T> _decodeBackupList<T>(
+  dynamic value,
+  T Function(Map<String, dynamic>) fromJson,
+) {
+  if (value == null) return [];
+  return (value as List)
+      .map((item) => fromJson(Map<String, dynamic>.from(item as Map)))
+      .toList();
 }
 
 class _GoogleAuthClient extends http.BaseClient {

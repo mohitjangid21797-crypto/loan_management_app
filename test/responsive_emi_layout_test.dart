@@ -8,6 +8,8 @@ import 'package:loan_management_app/screens/loans_list_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_database_test_helper.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -17,7 +19,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await UiTranslations.load();
 
-    final appProvider = AppProvider();
+    final appProvider = AppProvider(database: await createTestAppDatabase());
     await appProvider.initialize();
     final loan = Loan(
       id: 'narrow-layout-loan',

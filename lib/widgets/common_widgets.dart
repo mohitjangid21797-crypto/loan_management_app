@@ -249,10 +249,11 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color ?? Colors.white,
+        color: color ?? colorScheme.surface,
         borderRadius: borderRadius ?? BorderRadius.circular(20),
         boxShadow:
             boxShadow ??
@@ -263,7 +264,7 @@ class AppCard extends StatelessWidget {
                 offset: const Offset(0, 4),
               ),
             ],
-        border: Border.all(color: Colors.grey[100]!),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: child,
     );

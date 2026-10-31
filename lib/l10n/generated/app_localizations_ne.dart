@@ -628,10 +628,10 @@ class AppLocalizationsNe extends AppLocalizations {
   String get lastBackup => 'अन्तिम ब्याकअप';
 
   @override
-  String get localStorage => 'स्थानीय (SharedPreferences)';
+  String get localStorage => 'स्थानीय (SQLite database)';
 
   @override
-  String get backupFormatDesc => 'LMBK v1 (AES-256-GCM)';
+  String get backupFormatDesc => 'LMBK v2 (AES-256-GCM)';
 
   @override
   String get backupLocationDesc => 'Google Drive एप डेटा फोल्डर';
@@ -901,6 +901,9 @@ class AppLocalizationsNe extends AppLocalizations {
   String get interestRateLabelFull => 'ब्याज दर';
 
   @override
+  String get annualRateSuffix => 'प्रतिवर्ष';
+
+  @override
   String get tenureLabelFull => 'अवधि';
 
   @override
@@ -1050,6 +1053,12 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get save => 'सुरक्षित गर्नुहोस्';
+
+  @override
+  String get officeAddress => 'कार्यालयको ठेगाना';
+
+  @override
+  String get licenseNumber => 'इजाजतपत्र नम्बर';
 
   @override
   String get saveChanges => 'परिवर्तन सुरक्षित गर्नुहोस्';

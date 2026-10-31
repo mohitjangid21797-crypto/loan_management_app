@@ -1,12 +1,20 @@
+import 'dart:io';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart' hide Text;
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/index.dart';
 import 'providers/app_provider.dart';
 import 'providers/app_locale_provider.dart';
+import 'providers/app_theme_provider.dart';
 import 'screens/index.dart';
 import 'widgets/common_widgets.dart';
 import 'widgets/localized_text.dart';
@@ -19,10 +27,13 @@ void main() async {
   await UiTranslations.load();
   final localeProvider = AppLocaleProvider();
   await localeProvider.loadSavedLocale();
+  final themeProvider = AppThemeProvider();
+  await themeProvider.loadSavedTheme();
   runApp(
     LoanManagementApp(
       appProvider: appProvider,
       localeProvider: localeProvider,
+      themeProvider: themeProvider,
     ),
   );
 }
@@ -30,8 +41,14 @@ void main() async {
 class LoanManagementApp extends StatefulWidget {
   final AppProvider? appProvider;
   final AppLocaleProvider? localeProvider;
+  final AppThemeProvider? themeProvider;
 
-  const LoanManagementApp({super.key, this.appProvider, this.localeProvider});
+  const LoanManagementApp({
+    super.key,
+    this.appProvider,
+    this.localeProvider,
+    this.themeProvider,
+  });
 
   @override
   State<LoanManagementApp> createState() => _LoanManagementAppState();
@@ -40,6 +57,8 @@ class LoanManagementApp extends StatefulWidget {
 class _LoanManagementAppState extends State<LoanManagementApp> {
   late final AppLocaleProvider _localeProvider =
       widget.localeProvider ?? AppLocaleProvider();
+  late final AppThemeProvider _themeProvider =
+      widget.themeProvider ?? AppThemeProvider();
 
   @override
   Widget build(BuildContext context) {
@@ -48,31 +67,54 @@ class _LoanManagementAppState extends State<LoanManagementApp> {
       providers: [
         ChangeNotifierProvider.value(value: provider),
         ChangeNotifierProvider.value(value: _localeProvider),
+        ChangeNotifierProvider.value(value: _themeProvider),
       ],
-      child: Consumer<AppLocaleProvider>(
-        builder: (context, localeProvider, _) => MaterialApp(
-        title: 'Loan Management App',
-        debugShowCheckedModeBanner: false,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        locale: localeProvider.locale,
-        supportedLocales: AppLocaleProvider.supportedLanguageCodes
-            .map((code) => Locale(code)),
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1E3A8A),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          textTheme: GoogleFonts.interTextTheme(),
-          scaffoldBackgroundColor: Colors.white,
-        ),
-        home: const SplashScreen(),
+      child: Builder(
+        builder: (context) {
+          final localeProvider = context.watch<AppLocaleProvider>();
+          final themeProvider = context.watch<AppThemeProvider>();
+          return MaterialApp(
+            title: 'Loan Management App',
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            locale: localeProvider.locale,
+            supportedLocales: AppLocaleProvider.supportedLanguageCodes
+                .map((code) => Locale(code)),
+            themeMode: themeProvider.themeMode,
+            theme: _buildAppTheme(Brightness.light),
+            darkTheme: _buildAppTheme(Brightness.dark),
+            home: const SplashScreen(),
+          );
+        },
       ),
+    );
+  }
+
+  ThemeData _buildAppTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF1E3A8A),
+      brightness: brightness,
+    );
+    return ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      textTheme: GoogleFonts.interTextTheme(
+        isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
       ),
+      scaffoldBackgroundColor: isDark
+          ? const Color(0xFF111827)
+          : const Color(0xFFF8FAFC),
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      cardColor: colorScheme.surface,
     );
   }
 }
@@ -147,7 +189,6 @@ class _SplashScreenState extends State<SplashScreen>
     final double logoSize = (screenWidth * 0.28)
         .clamp(72.0, isSmallScreen ? 96.0 : 120.0)
         .toDouble();
-    final double iconSize = logoSize * 0.5;
     final double titleFontSize = (screenWidth * 0.08)
         .clamp(22.0, isSmallScreen ? 28.0 : 32.0)
         .toDouble();
@@ -176,50 +217,65 @@ class _SplashScreenState extends State<SplashScreen>
               AnimatedBuilder(
                 animation: _rotationController,
                 builder: (context, child) {
-                  return Transform.rotate(
-                    angle: _rotationController.value * 2 * 3.14159,
-                    child: AnimatedBuilder(
-                      animation: _scaleController,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: _scaleController.value,
-                          child: Container(
-                            width: logoSize,
-                            height: logoSize,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                  colors: [Colors.white, Color(0xFFE0E7FF)],
+                  final phase = _rotationController.value * 2 * math.pi;
+                  final tiltX = math.cos(phase) * 0.12;
+                  final tiltY = math.sin(phase) * 0.32;
+                  final floatOffset = math.sin(phase) * 7;
+
+                  return Transform.translate(
+                    offset: Offset(0, floatOffset),
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.0015)
+                        ..rotateX(tiltX)
+                        ..rotateY(tiltY),
+                      child: AnimatedBuilder(
+                        animation: _scaleController,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _scaleController.value *
+                                (1 + math.sin(phase) * 0.025),
+                            child: Container(
+                              width: logoSize,
+                              height: logoSize,
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(logoSize * 0.22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.32),
+                                    blurRadius:
+                                        logoSize * (0.22 + math.sin(phase) * 0.025),
+                                    offset: Offset(0, logoSize * 0.12),
+                                  ),
+                                  BoxShadow(
+                                    color: Colors.white.withValues(alpha: 0.22),
+                                    blurRadius: logoSize * 0.08,
+                                    offset: Offset(
+                                      -logoSize * 0.04,
+                                      -logoSize * 0.04,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              borderRadius: BorderRadius.circular(logoSize * 0.25),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: logoSize * 0.25,
-                                  offset: Offset(0, logoSize * 0.125),
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(logoSize * 0.22),
+                                child: Image.asset(
+                                  'assets/appLogo.png',
+                                  fit: BoxFit.cover,
                                 ),
-                                BoxShadow(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  blurRadius: logoSize * 0.08,
-                                  offset: Offset(-logoSize * 0.04, -logoSize * 0.04),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.account_balance_rounded,
-                                size: iconSize,
-                                color: const Color(0xFF1E3A8A),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   );
                 },
               )
                   .animate()
-                  .scale(duration: 800.ms, curve: Curves.elasticOut)
                   .shimmer(duration: 2000.ms, color: Colors.white.withValues(alpha: 0.3)),
 
               SizedBox(height: isSmallScreen ? 24 : 32),
@@ -346,6 +402,34 @@ Future.delayed(const Duration(milliseconds: 1500), () {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF1E3A8A).withValues(alpha: 0.2),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/appLogo.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ).animate().fadeIn(duration: 500.ms).scale(
+                    begin: const Offset(0.85, 0.85),
+                    duration: 500.ms,
+                    curve: Curves.easeOutBack,
+                  ),
+                  const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
                     child: OutlinedButton.icon(
@@ -659,7 +743,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final totalEMIDue = pendingEMIs.fold(0.0, (sum, e) => sum + e.amount);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           CustomScrollView(
@@ -701,6 +785,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    if (lender?.profileImagePath != null) ...[
+                                      _ProfileAvatar(
+                                        imagePath: lender!.profileImagePath,
+                                        size: 52,
+                                        backgroundColor:
+                                            Colors.white.withValues(alpha: 0.2),
+                                        iconColor: Colors.white,
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
                                     Text(
                                       _getGreeting(),
                                       style: GoogleFonts.inter(
@@ -1340,6 +1434,48 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 }
 
+class _ProfileAvatar extends StatelessWidget {
+  final String? imagePath;
+  final double size;
+  final Color backgroundColor;
+  final Color iconColor;
+
+  const _ProfileAvatar({
+    required this.imagePath,
+    required this.size,
+    required this.backgroundColor,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final path = imagePath;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(
+        child: path == null
+            ? Icon(Icons.person_rounded, size: size * 0.55, color: iconColor)
+            : Image.file(
+                File(path),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.person_rounded,
+                  size: size * 0.55,
+                  color: iconColor,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -1353,6 +1489,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _emailController = TextEditingController();
   final _addressController = TextEditingController();
   final _licenseController = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -1381,6 +1518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email: _emailController.text.trim(),
       address: _addressController.text.trim(),
       licenseNumber: _licenseController.text.trim(),
+      profileImagePath: provider.lender?.profileImagePath,
       createdAt: provider.lender?.createdAt,
     );
     await provider.updateLender(lender);
@@ -1395,6 +1533,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    try {
+      final provider = context.read<AppProvider>();
+      final pickedImage = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (pickedImage == null || !mounted) return;
+
+      final lender = provider.lender;
+      if (lender == null) {
+        throw StateError('Lender profile is not available.');
+      }
+
+      final appDirectory = await getApplicationDocumentsDirectory();
+      final photoDirectory = Directory(
+        p.join(appDirectory.path, 'profile_photos'),
+      );
+      await photoDirectory.create(recursive: true);
+      final extension = p.extension(pickedImage.path);
+      final photoFile = File(
+        p.join(
+          photoDirectory.path,
+          'profile_${lender.id}${extension.isEmpty ? '.jpg' : extension}',
+        ),
+      );
+      await File(pickedImage.path).copy(photoFile.path);
+      await provider.updateLender(
+        lender.copyWith(profileImagePath: photoFile.path),
+      );
+    } on PlatformException catch (error) {
+      _showProfilePhotoError(error.message ?? error.code);
+    } on FileSystemException catch (error) {
+      _showProfilePhotoError(error.message);
+    }
+  }
+
+  void _showProfilePhotoError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Unable to update profile photo: $message'),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -1413,12 +1599,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final lender = provider.lender;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text('Profile', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -1439,16 +1625,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.person_rounded, size: 40, color: Colors.white),
-                        ),
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          _ProfileAvatar(
+                            imagePath: lender?.profileImagePath,
+                            size: 80,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.2),
+                            iconColor: Colors.white,
+                          ),
+                          Positioned(
+                            right: -4,
+                            bottom: -4,
+                            child: Material(
+                              color: const Color(0xFF1E3A8A),
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: _pickProfilePhoto,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(7),
+                                  child: Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(width: 20),
                       Expanded(

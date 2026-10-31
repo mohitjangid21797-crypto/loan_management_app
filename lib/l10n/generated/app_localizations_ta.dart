@@ -636,10 +636,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get lastBackup => 'கடைசி காப்புப்பிரதி';
 
   @override
-  String get localStorage => 'உள்ளூர் (SharedPreferences)';
+  String get localStorage => 'உள்ளூர் (SQLite database)';
 
   @override
-  String get backupFormatDesc => 'LMBK v1 (AES-256-GCM)';
+  String get backupFormatDesc => 'LMBK v2 (AES-256-GCM)';
 
   @override
   String get backupLocationDesc => 'Google Drive செயலி தரவு கோப்புறை';
@@ -910,6 +910,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get interestRateLabelFull => 'வட்டி விகிதம்';
 
   @override
+  String get annualRateSuffix => 'ஆண்டுக்கு';
+
+  @override
   String get tenureLabelFull => 'காலம்';
 
   @override
@@ -1059,6 +1062,12 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get save => 'சேமி';
+
+  @override
+  String get officeAddress => 'அலுவலக முகவரி';
+
+  @override
+  String get licenseNumber => 'உரிம எண்';
 
   @override
   String get saveChanges => 'மாற்றங்களைச் சேமி';

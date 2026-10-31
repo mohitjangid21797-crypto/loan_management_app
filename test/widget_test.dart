@@ -9,10 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:loan_management_app/main.dart';
 import 'package:loan_management_app/providers/app_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'app_database_test_helper.dart';
 
 void main() {
   testWidgets('App loads and shows login screen', (WidgetTester tester) async {
-    final appProvider = AppProvider();
+    SharedPreferences.setMockInitialValues({});
+    final appProvider = AppProvider(database: await createTestAppDatabase());
     await appProvider.initialize();
     
     await tester.pumpWidget(

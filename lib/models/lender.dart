@@ -7,6 +7,7 @@ class Lender {
   final String email;
   final String address;
   final String licenseNumber;
+  final String? profileImagePath;
   final DateTime createdAt;
 
   Lender({
@@ -16,6 +17,7 @@ class Lender {
     required this.email,
     required this.address,
     required this.licenseNumber,
+    this.profileImagePath,
     DateTime? createdAt,
   }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now();
@@ -27,6 +29,7 @@ class Lender {
         'email': email,
         'address': address,
         'licenseNumber': licenseNumber,
+        'profileImagePath': profileImagePath,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -37,6 +40,7 @@ class Lender {
         email: json['email'],
         address: json['address'],
         licenseNumber: json['licenseNumber'],
+        profileImagePath: json['profileImagePath'],
         createdAt: DateTime.parse(json['createdAt']),
       );
 
@@ -46,6 +50,7 @@ class Lender {
     String? email,
     String? address,
     String? licenseNumber,
+    String? profileImagePath,
   }) => Lender(
         id: id,
         name: name ?? this.name,
@@ -53,6 +58,7 @@ class Lender {
         email: email ?? this.email,
         address: address ?? this.address,
         licenseNumber: licenseNumber ?? this.licenseNumber,
+        profileImagePath: profileImagePath ?? this.profileImagePath,
         createdAt: createdAt,
       );
 }

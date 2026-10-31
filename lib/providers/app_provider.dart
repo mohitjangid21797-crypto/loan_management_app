@@ -3,13 +3,18 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../models/index.dart';
+import '../services/app_database.dart';
 
 class AppProvider extends ChangeNotifier {
+  final AppDatabase database;
   Lender? _lender;
   final List<Customer> _customers = [];
   final List<Loan> _loans = [];
   final List<EMI> _emis = [];
   final List<LoanDocument> _documents = [];
+
+  AppProvider({AppDatabase? database})
+    : database = database ?? AppDatabase.instance;
 
   Lender? get lender => _lender;
   List<Customer> get customers => List.unmodifiable(_customers);
@@ -70,12 +75,12 @@ class AppProvider extends ChangeNotifier {
   Future<void> initialize() async {
     await _loadFromStorage();
     if (_lender == null) {
-      _createDefaultLender();
+      await _createDefaultLender();
     }
     notifyListeners();
   }
 
-  void _createDefaultLender() {
+  Future<void> _createDefaultLender() async {
     _lender = Lender(
       name: 'John Doe',
       mobileNumber: '9876543210',
@@ -83,7 +88,7 @@ class AppProvider extends ChangeNotifier {
       address: '123 Finance Street, Mumbai, Maharashtra 400001',
       licenseNumber: 'LM-2024-001',
     );
-    _saveToStorage();
+    await _saveToStorage();
   }
 
   Future<void> updateLender(Lender lender) async {
@@ -94,6 +99,30 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> addCustomer(Customer customer) async {
     _customers.add(customer);
+    await _saveToStorage();
+    notifyListeners();
+  }
+
+  Future<void> replaceAllData({
+    required Lender? lender,
+    required List<Customer> customers,
+    required List<Loan> loans,
+    required List<EMI> emis,
+    required List<LoanDocument> documents,
+  }) async {
+    _lender = lender;
+    _customers
+      ..clear()
+      ..addAll(customers);
+    _loans
+      ..clear()
+      ..addAll(loans);
+    _emis
+      ..clear()
+      ..addAll(emis);
+    _documents
+      ..clear()
+      ..addAll(documents);
     await _saveToStorage();
     notifyListeners();
   }
@@ -242,7 +271,6 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> _saveToStorage() async {
-    final prefs = await SharedPreferences.getInstance();
     final data = {
       'lender': _lender?.toJson(),
       'customers': _customers.map((c) => c.toJson()).toList(),
@@ -250,43 +278,58 @@ class AppProvider extends ChangeNotifier {
       'emis': _emis.map((e) => e.toJson()).toList(),
       'documents': _documents.map((d) => d.toJson()).toList(),
     };
-    await prefs.setString('app_data', jsonEncode(data));
+    await database.writeState(data);
   }
 
   Future<void> saveToStorage() async {
     await _saveToStorage();
   }
 
+  Future<void> reloadFromStorage() async {
+    _lender = null;
+    _customers.clear();
+    _loans.clear();
+    _emis.clear();
+    _documents.clear();
+    await _loadFromStorage();
+    notifyListeners();
+  }
+
   Future<void> _loadFromStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final dataString = prefs.getString('app_data');
-    if (dataString != null) {
-      final data = jsonDecode(dataString) as Map<String, dynamic>;
-      
-      if (data['lender'] != null) {
-        _lender = Lender.fromJson(data['lender']);
-      }
-      
-      if (data['customers'] != null) {
-        _customers.clear();
-        _customers.addAll((data['customers'] as List).map((e) => Customer.fromJson(e)));
-      }
-      
-      if (data['loans'] != null) {
-        _loans.clear();
-        _loans.addAll((data['loans'] as List).map((e) => Loan.fromJson(e)));
-      }
-      
-      if (data['emis'] != null) {
-        _emis.clear();
-        _emis.addAll((data['emis'] as List).map((e) => EMI.fromJson(e)));
-      }
-      
-      if (data['documents'] != null) {
-        _documents.clear();
-        _documents.addAll((data['documents'] as List).map((e) => LoanDocument.fromJson(e)));
-      }
+    var data = await database.readState();
+    if (data == null) {
+      final prefs = await SharedPreferences.getInstance();
+      final legacyData = prefs.getString('app_data');
+      if (legacyData == null) return;
+      data = Map<String, dynamic>.from(jsonDecode(legacyData) as Map);
+      await database.writeState(data);
     }
+
+    if (data['lender'] != null) {
+      _lender = Lender.fromJson(
+        Map<String, dynamic>.from(data['lender'] as Map),
+      );
+    }
+    _customers.addAll(
+      (data['customers'] as List? ?? []).map(
+        (e) => Customer.fromJson(Map<String, dynamic>.from(e as Map)),
+      ),
+    );
+    _loans.addAll(
+      (data['loans'] as List? ?? []).map(
+        (e) => Loan.fromJson(Map<String, dynamic>.from(e as Map)),
+      ),
+    );
+    _emis.addAll(
+      (data['emis'] as List? ?? []).map(
+        (e) => EMI.fromJson(Map<String, dynamic>.from(e as Map)),
+      ),
+    );
+    _documents.addAll(
+      (data['documents'] as List? ?? []).map(
+        (e) => LoanDocument.fromJson(Map<String, dynamic>.from(e as Map)),
+      ),
+    );
   }
 
   void clearAllData() {

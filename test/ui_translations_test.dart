@@ -24,6 +24,38 @@ void main() {
     },
   );
 
+  test(
+    'translates profile address and license labels in every language',
+    () async {
+      await UiTranslations.load();
+
+      for (final languageCode in AppLocaleProvider.supportedLanguageCodes) {
+        expect(
+          UiTranslations.translate(languageCode, 'Office Address'),
+          isNotEmpty,
+          reason: languageCode,
+        );
+        expect(
+          UiTranslations.translate(languageCode, 'License Number'),
+          isNotEmpty,
+          reason: languageCode,
+        );
+        if (languageCode != 'en') {
+          expect(
+            UiTranslations.translate(languageCode, 'Office Address'),
+            isNot('Office Address'),
+            reason: languageCode,
+          );
+          expect(
+            UiTranslations.translate(languageCode, 'License Number'),
+            isNot('License Number'),
+            reason: languageCode,
+          );
+        }
+      }
+    },
+  );
+
   test('provides precise Hindi translations for PDF labels', () async {
     await UiTranslations.load();
 
@@ -47,5 +79,7 @@ void main() {
       UiTranslations.translateKey('hi', 'partiesTitle'),
       'समझौते के पक्षकार',
     );
+    expect(UiTranslations.translateKey('hi', 'annualRateSuffix'), 'प्रति वर्ष');
+    expect(UiTranslations.translateKey('hi', 'currencySymbol'), '₹');
   });
 }

@@ -73,7 +73,7 @@ class _LoansListScreenState extends State<LoansListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: _isSearching
             ? TextField(
@@ -88,9 +88,9 @@ class _LoansListScreenState extends State<LoansListScreen> {
                 onChanged: (_) => _filterLoans(),
               )
             : Text('Loans', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         leading: _isSearching
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
