@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_animate: ^4.5.0
   google_fonts: ^6.2.1
+  logger: ^2.5.0
   provider: ^6.1.2
   pdf: ^3.11.0
   printing: ^5.12.0
@@ -106,6 +107,37 @@ flutter:
     - assets/fonts/NotoSansTamil-Regular.ttf
     - assets/fonts/NotoSansTelugu-Regular.ttf
     - assets/appLogo.png
+  fonts:
+    - family: Noto Sans Arabic
+      fonts:
+        - asset: assets/fonts/NotoSansArabic-Regular.ttf
+    - family: Noto Sans Bengali
+      fonts:
+        - asset: assets/fonts/NotoSansBengali-Regular.ttf
+    - family: Noto Sans Devanagari
+      fonts:
+        - asset: assets/fonts/NotoSansDevanagari-Regular.ttf
+    - family: Noto Sans Gujarati
+      fonts:
+        - asset: assets/fonts/NotoSansGujarati-Regular.ttf
+    - family: Noto Sans Gurmukhi
+      fonts:
+        - asset: assets/fonts/NotoSansGurmukhi-Regular.ttf
+    - family: Noto Sans Kannada
+      fonts:
+        - asset: assets/fonts/NotoSansKannada-Regular.ttf
+    - family: Noto Sans Malayalam
+      fonts:
+        - asset: assets/fonts/NotoSansMalayalam-Regular.ttf
+    - family: Noto Sans Oriya
+      fonts:
+        - asset: assets/fonts/NotoSansOriya-Regular.ttf
+    - family: Noto Sans Tamil
+      fonts:
+        - asset: assets/fonts/NotoSansTamil-Regular.ttf
+    - family: Noto Sans Telugu
+      fonts:
+        - asset: assets/fonts/NotoSansTelugu-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -137,4 +169,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-

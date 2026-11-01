@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +22,7 @@ void main() {
   });
 
   setUp(() {
+    IndicPdfGenerator.forceRasterForTesting = false;
     lender = Lender(
       name: 'Lender <script>alert("name")</script>',
       mobileNumber: '9876543210',
@@ -67,6 +69,7 @@ void main() {
   });
 
   tearDown(() {
+    IndicPdfGenerator.forceRasterForTesting = false;
     IndicPdfGenerator.htmlConverterForTesting = null;
     IndicPdfGenerator.htmlCapabilityForTesting = null;
   });
@@ -117,6 +120,96 @@ void main() {
     expect(html, contains('₹ 1,23,456.00'));
   });
 
+  test('HTML stays light and includes localized schedule data in Hindi and Tamil', () async {
+    for (final languageCode in ['hi', 'ta']) {
+      final html = await IndicPdfGenerator.buildHtml(
+        lender: lender,
+        customer: customer,
+        loan: loan,
+        emis: emis.take(1).toList(),
+        languageCode: languageCode,
+      );
+
+      expect(html, contains('<meta name="color-scheme" content="only light">'));
+      expect(
+        html,
+        contains('<meta name="supported-color-schemes" content="light">'),
+      );
+      expect(html, contains(':root{color-scheme:only light;}'));
+      expect(html, contains('Borrower'));
+      expect(
+        html,
+        contains(
+          UiTranslations.translateKey(languageCode, 'principalAmountLabel'),
+        ),
+      );
+      expect(html, contains('₹ 1,23,456.00'));
+      expect(
+        html,
+        contains(
+          '<tr><td>1</td><td>'
+          '${IndicPdfGenerator.formatDate(emis.first.dueDate, languageCode)}</td>',
+        ),
+      );
+    }
+  });
+
+  test('generated HTML has no invisible text styles', () async {
+    final html = await IndicPdfGenerator.buildHtml(
+      lender: lender,
+      customer: customer,
+      loan: loan,
+      emis: emis.take(1).toList(),
+      languageCode: 'hi',
+    );
+
+    expect(
+      html,
+      isNot(matches(RegExp(r'opacity\s*:\s*0(?:[;}])', caseSensitive: false))),
+    );
+    expect(
+      html,
+      isNot(matches(RegExp(r'visibility\s*:\s*hidden', caseSensitive: false))),
+    );
+    expect(
+      html,
+      isNot(matches(RegExp(r'color\s*:\s*transparent', caseSensitive: false))),
+    );
+  });
+
+  test('uses the injected HTML renderer and forced raster renderer', () async {
+    var htmlRendererCalled = false;
+    IndicPdfGenerator.htmlConverterForTesting = (html, format) async {
+      htmlRendererCalled = true;
+      return Uint8List.fromList('%PDF-html'.codeUnits);
+    };
+
+    final htmlPdf = await PDFGenerator.generateLoanAgreement(
+      lender: lender,
+      customer: customer,
+      loan: loan,
+      emis: emis.take(1).toList(),
+      languageCode: 'hi',
+    );
+
+    expect(htmlPdf, isNotEmpty);
+    expect(htmlRendererCalled, isTrue);
+
+    htmlRendererCalled = false;
+    IndicPdfGenerator.forceRasterForTesting = true;
+    final rasterPdf = await PDFGenerator.generateLoanAgreement(
+      lender: lender,
+      customer: customer,
+      loan: loan,
+      emis: emis.take(1).toList(),
+      languageCode: 'hi',
+    );
+
+    expect(rasterPdf, isNotEmpty);
+    expect(String.fromCharCodes(rasterPdf.take(4)), '%PDF');
+    expect(htmlRendererCalled, isFalse);
+  });
+
   test('escapes user data and applies Urdu text direction in HTML', () async {
     final html = await IndicPdfGenerator.buildHtml(
       lender: lender,
@@ -149,6 +242,25 @@ void main() {
 
       expect(bytes, isNotEmpty);
       expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    },
+  );
+
+  test(
+    'paginates localized schedule rows on dedicated fallback pages',
+    () async {
+      IndicPdfGenerator.htmlCapabilityForTesting = () async => false;
+
+      final bytes = await PDFGenerator.generateLoanAgreement(
+        lender: lender,
+        customer: customer,
+        loan: loan,
+        emis: emis.take(21).toList(),
+        languageCode: 'hi',
+      );
+      final pdfSource = latin1.decode(bytes);
+      final pageCount = RegExp(r'/Type\s*/Page\b').allMatches(pdfSource).length;
+
+      expect(pageCount, 4);
     },
   );
 

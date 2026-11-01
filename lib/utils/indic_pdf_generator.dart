@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:logger/logger.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -43,6 +44,8 @@ class IndicPdfGenerator {
     'ur': ('Noto Sans Arabic', 'assets/fonts/NotoSansArabic-Regular.ttf'),
   };
 
+  static const _scheduleRowsPerPage = 20;
+
   static const _hindiMonths = [
     'जनवरी',
     'फ़रवरी',
@@ -60,6 +63,7 @@ class IndicPdfGenerator {
 
   static const _htmlConversionTimeout = Duration(seconds: 20);
   static const _htmlCapabilityTimeout = Duration(seconds: 5);
+  static final _logger = Logger();
   static final _monthNamesByLanguage = <String, List<String>>{};
   static final _dateFormatsByLanguage = <String, DateFormat>{};
   static final _yearFormatsByLanguage = <String, DateFormat>{};
@@ -72,6 +76,9 @@ class IndicPdfGenerator {
 
   @visibleForTesting
   static Future<bool> Function()? htmlCapabilityForTesting;
+
+  @visibleForTesting
+  static bool forceRasterForTesting = false;
 
   static bool supportsLanguage(String languageCode) =>
       _fontAssets.containsKey(languageCode);
@@ -120,10 +127,25 @@ class IndicPdfGenerator {
     final sortedEmis = List<EMI>.of(emis)
       ..sort((a, b) => a.installmentNumber.compareTo(b.installmentNumber));
 
+    if (forceRasterForTesting) {
+      _logger.i('Indic PDF renderer: raster fallback forced ($languageCode)');
+      return _generateRasterFallback(
+        lender: lender,
+        customer: customer,
+        loan: loan,
+        emis: sortedEmis,
+        languageCode: languageCode,
+      );
+    }
+
     late final bool canConvertHtml;
     try {
       canConvertHtml = await _canConvertHtml().timeout(_htmlCapabilityTimeout);
-    } on Object {
+    } on Object catch (error) {
+      _logger.w(
+        'Indic PDF renderer: raster fallback; HTML capability check failed '
+        '($error)',
+      );
       return _generateRasterFallback(
         lender: lender,
         customer: customer,
@@ -142,6 +164,10 @@ class IndicPdfGenerator {
     );
 
     if (!canConvertHtml) {
+      _logger.i(
+        'Indic PDF renderer: raster fallback; HTML conversion unsupported '
+        '($languageCode)',
+      );
       return _generateRasterFallback(
         lender: lender,
         customer: customer,
@@ -152,12 +178,17 @@ class IndicPdfGenerator {
     }
 
     try {
+      _logger.i('Indic PDF renderer: HTML conversion ($languageCode)');
       final bytes = await _convertHtml(html);
       if (bytes.isEmpty) {
         throw StateError('HTML PDF conversion returned an empty document');
       }
       return bytes;
     } on Object catch (conversionError) {
+      _logger.w(
+        'Indic PDF renderer: raster fallback; HTML conversion failed '
+        '($conversionError)',
+      );
       try {
         return await _generateRasterFallback(
           lender: lender,
@@ -167,6 +198,11 @@ class IndicPdfGenerator {
           languageCode: languageCode,
         );
       } on Object catch (fallbackError, fallbackStackTrace) {
+        _logger.e(
+          'Indic PDF renderer: raster fallback failed',
+          error: fallbackError,
+          stackTrace: fallbackStackTrace,
+        );
         Error.throwWithStackTrace(
           StateError(
             'HTML PDF conversion failed ($conversionError), and the '
@@ -241,16 +277,20 @@ class IndicPdfGenerator {
       ..write(
         '<!doctype html><html lang="${_escapeHtml(languageCode)}" '
         'dir="$direction"><head><meta charset="utf-8"><meta '
-        'name="viewport" content="width=device-width, initial-scale=1">',
+        'name="viewport" content="width=device-width, initial-scale=1">'
+        '<meta name="color-scheme" content="only light">'
+        '<meta name="supported-color-schemes" content="light">',
       )
       ..write('<style>')
       ..write(
         '@font-face{font-family:"${font.$1}";src:url(data:font/ttf;base64,'
-        '$fontBase64) format("truetype");font-weight:400;}',
+        '$fontBase64) format("truetype");font-weight:400;font-display:swap;}',
       )
       ..write('''
 @page{size:A4;margin:16mm 14mm;}
 *{box-sizing:border-box;}
+:root{color-scheme:only light;}
+html,body{background:#ffffff !important;color:#172033;-webkit-print-color-adjust:exact;print-color-adjust:exact;forced-color-adjust:none;}
 body{font-family:"${font.$1}","Noto Sans",sans-serif;font-size:10pt;color:#172033;line-height:1.35;direction:$direction;}
 h1,h2,h3,p{margin:0;}
 .header{background:#1e3a8a;color:#fff;padding:16px 18px;border-radius:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
@@ -446,30 +486,48 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
     required List<EMI> emis,
     required String languageCode,
   }) async {
-    const firstPageRows = 14;
-    const followingPageRows = 40;
     final document = pw.Document();
-    final firstRows = emis.take(firstPageRows).toList();
-    final remainingRows = emis.skip(firstRows.length).toList();
-    final rowPages = <List<EMI>>[firstRows];
-    for (
-      var index = 0;
-      index < remainingRows.length;
-      index += followingPageRows
-    ) {
-      rowPages.add(remainingRows.skip(index).take(followingPageRows).toList());
-    }
+    final introImage = await _rasterizeWidget(
+      _fallbackPage(
+        lender: lender,
+        customer: customer,
+        loan: loan,
+        emis: const [],
+        languageCode: languageCode,
+        includeIntro: true,
+        includeSchedule: false,
+      ),
+    );
+    document.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero,
+        build: (_) => pw.Image(
+          pw.MemoryImage(introImage),
+          width: PdfPageFormat.a4.width,
+          height: PdfPageFormat.a4.height,
+        ),
+      ),
+    );
 
-    for (var index = 0; index < rowPages.length; index++) {
+    final schedulePages = <List<EMI>>[];
+    for (var index = 0; index < emis.length; index += _scheduleRowsPerPage) {
+      schedulePages.add(
+        emis.skip(index).take(_scheduleRowsPerPage).toList(),
+      );
+    }
+    if (schedulePages.isEmpty) schedulePages.add(const []);
+
+    for (final pageEmis in schedulePages) {
       final imageBytes = await _rasterizeWidget(
         _fallbackPage(
           lender: lender,
           customer: customer,
           loan: loan,
-          emis: rowPages[index],
+          emis: pageEmis,
           languageCode: languageCode,
-          includeIntro: index == 0,
-          includeScheduleTitle: true,
+          includeIntro: false,
+          includeSchedule: true,
         ),
       );
       document.addPage(
@@ -558,7 +616,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
     required List<EMI> emis,
     required String languageCode,
     required bool includeIntro,
-    required bool includeScheduleTitle,
+    required bool includeSchedule,
   }) {
     final isRtl = languageCode == 'ur';
     final currency = NumberFormat.currency(
@@ -569,12 +627,19 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
     final t = (String key) => UiTranslations.translateKey(languageCode, key);
     final white = material.Colors.white;
     final navy = const material.Color(0xFF1E3A8A);
+    final fontFamily = _fontAssets[languageCode]!.$1;
 
-    Widget text(String value, {double size = 10, bool bold = false}) =>
+    Widget text(
+      String value, {
+      double size = 10,
+      bool bold = false,
+      material.Color color = const material.Color(0xFF172033),
+    }) =>
         material.Text(
           value,
           style: material.TextStyle(
             fontSize: size,
+            color: color,
             fontWeight: bold
                 ? material.FontWeight.bold
                 : material.FontWeight.normal,
@@ -600,7 +665,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
             ])
               Padding(
                 padding: const EdgeInsets.all(5),
-                child: DefaultTextStyle(
+                child: DefaultTextStyle.merge(
                   style: const TextStyle(
                     color: material.Colors.white,
                     fontSize: 8,
@@ -650,19 +715,24 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       textDirection: isRtl
           ? material.TextDirection.rtl
           : material.TextDirection.ltr,
-      child: Container(
-        width: 794,
-        height: 1123,
-        color: white,
-        padding: const EdgeInsets.all(45),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      child: DefaultTextStyle(
+        style: material.TextStyle(
+          fontFamily: fontFamily,
+          color: const material.Color(0xFF172033),
+        ),
+        child: Container(
+          width: 794,
+          height: 1123,
+          color: white,
+          padding: const EdgeInsets.all(45),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             if (includeIntro) ...[
               Container(
                 color: navy,
                 padding: const EdgeInsets.all(16),
-                child: DefaultTextStyle(
+                child: DefaultTextStyle.merge(
                   style: const TextStyle(color: material.Colors.white),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -671,8 +741,17 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            text(t('appTitle'), size: 19, bold: true),
-                            text(t('pdfAgreementSubtitle'), size: 11),
+                            text(
+                              t('appTitle'),
+                              size: 19,
+                              bold: true,
+                              color: material.Colors.white,
+                            ),
+                            text(
+                              t('pdfAgreementSubtitle'),
+                              size: 11,
+                              color: material.Colors.white,
+                            ),
                           ],
                         ),
                       ),
@@ -682,10 +761,12 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
                           text(
                             '${t('generatedLabel')}: ${formatDateTime(DateTime.now(), languageCode)}',
                             size: 8,
+                            color: material.Colors.white,
                           ),
                           text(
                             '${t('docIdLabel')}: ${lender.licenseNumber}',
                             size: 8,
+                            color: material.Colors.white,
                           ),
                         ],
                       ),
@@ -726,11 +807,12 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
               section(t('loanDetailsTitle')),
               _fallbackLoanDetails(loan, languageCode, currency),
             ],
-            if (includeScheduleTitle) section(t('emiScheduleTitle')),
-            if (!includeIntro && !includeScheduleTitle)
-              section(t('emiScheduleTitle')),
-            scheduleTable(),
-          ],
+              if (includeSchedule) ...[
+                section(t('emiScheduleTitle')),
+                scheduleTable(),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -744,6 +826,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
     String languageCode,
   ) {
     final t = (String key) => UiTranslations.translateKey(languageCode, key);
+    final fontFamily = _fontAssets[languageCode]!.$1;
     final currency = NumberFormat.currency(
       locale: 'en_IN',
       symbol: '${t('currencySymbol')} ',
@@ -760,9 +843,18 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF6B7280)),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF172033),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -771,17 +863,26 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       textDirection: languageCode == 'ur'
           ? material.TextDirection.rtl
           : material.TextDirection.ltr,
-      child: Container(
-        width: 794,
-        height: 1123,
-        color: material.Colors.white,
-        padding: const EdgeInsets.all(55),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      child: DefaultTextStyle(
+        style: material.TextStyle(
+          fontFamily: fontFamily,
+          color: const material.Color(0xFF172033),
+        ),
+        child: Container(
+          width: 794,
+          height: 1123,
+          color: material.Colors.white,
+          padding: const EdgeInsets.all(55),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             Text(
               t('paymentSummaryTitle'),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Color(0xFF172033),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 20),
             Row(
@@ -820,10 +921,19 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
               ],
             ),
             const SizedBox(height: 35),
-            Text(t('footerText'), textAlign: TextAlign.center),
+            Text(
+              t('footerText'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF172033)),
+            ),
             const SizedBox(height: 5),
-            Text(t('confidentialLabel'), textAlign: TextAlign.center),
-          ],
+            Text(
+              t('confidentialLabel'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF172033)),
+            ),
+            ],
+          ),
         ),
       ),
     );
@@ -831,7 +941,10 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
 
   static Widget _fallbackCell(String value) => Padding(
     padding: const EdgeInsets.all(5),
-    child: Text(value, style: const TextStyle(fontSize: 8)),
+    child: Text(
+      value,
+      style: const TextStyle(color: Color(0xFF172033), fontSize: 8),
+    ),
   );
 
   static Widget _fallbackCard(String title, List<String> details) => Container(
@@ -844,12 +957,21 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF172033),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 5),
         ...details.map(
           (detail) => Padding(
             padding: const EdgeInsets.only(bottom: 3),
-            child: Text(detail, style: const TextStyle(fontSize: 9)),
+            child: Text(
+              detail,
+              style: const TextStyle(color: Color(0xFF172033), fontSize: 9),
+            ),
           ),
         ),
       ],
@@ -906,9 +1028,16 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Color(0xFF172033),
+            fontSize: 8,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        Text(value, style: const TextStyle(fontSize: 9)),
+        Text(
+          value,
+          style: const TextStyle(color: Color(0xFF172033), fontSize: 9),
+        ),
       ],
     ),
   );
@@ -922,11 +1051,18 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       const SizedBox(height: 65),
       Container(height: 1, color: const Color(0xFF9CA3AF)),
       const SizedBox(height: 8),
-      Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      Text(name),
+      Text(
+        title,
+        style: const TextStyle(
+          color: Color(0xFF172033),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      Text(name, style: const TextStyle(color: Color(0xFF172033))),
       Text(
         '${UiTranslations.translateKey(languageCode, 'dateLabel')}: '
         '${formatDate(DateTime.now(), languageCode)}',
+        style: const TextStyle(color: Color(0xFF172033)),
       ),
     ],
   );
