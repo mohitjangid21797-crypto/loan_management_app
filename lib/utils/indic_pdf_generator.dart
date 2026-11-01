@@ -45,6 +45,8 @@ class IndicPdfGenerator {
   };
 
   static const _scheduleRowsPerPage = 20;
+  static const _firstHtmlScheduleRows = 30;
+  static const _followingHtmlScheduleRows = 60;
 
   static const _hindiMonths = [
     'जनवरी',
@@ -310,6 +312,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
 .schedule td{font-size:8pt;text-align:center;}
 .schedule thead{display:table-header-group;}
 .schedule tr{break-inside:avoid;page-break-inside:avoid;}
+.schedule-continuation{break-before:page;page-break-before:always;}
 .money{direction:ltr;unicode-bidi:plaintext;text-align:start;}
 .summary{break-before:page;page-break-before:always;}
 .summary-grid{display:flex;justify-content:space-between;gap:10px;margin:12px 0;}
@@ -395,7 +398,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
         '<th>${t('paidDateHeader')}</th></tr></thead><tbody>',
       );
 
-    for (final emi in emis) {
+    void writeEmiRow(EMI emi) {
       final paymentStatus = switch (emi.status) {
         EMIStatus.paid => 'emiPaid',
         EMIStatus.pending => 'emiPending',
@@ -410,6 +413,32 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       );
     }
 
+    for (final emi in emis.take(_firstHtmlScheduleRows)) {
+      writeEmiRow(emi);
+    }
+    html.write('</tbody></table>');
+
+    for (
+      var index = _firstHtmlScheduleRows;
+      index < emis.length;
+      index += _followingHtmlScheduleRows
+    ) {
+      html.write(
+        '<section class="schedule-continuation">'
+        '<h2 class="section-title schedule-continuation-title">'
+        '${t('emiScheduleTitle')}</h2>'
+        '<table class="schedule"><thead><tr>'
+        '<th>${t('installmentHeader')}</th><th>${t('dueDateHeader')}</th>'
+        '<th>${t('emiAmountHeader')}</th><th>${t('statusHeader')}</th>'
+        '<th>${t('paidDateHeader')}</th></tr></thead><tbody>',
+      );
+      final pageEmis = emis.skip(index).take(_followingHtmlScheduleRows);
+      for (final emi in pageEmis) {
+        writeEmiRow(emi);
+      }
+      html.write('</tbody></table></section>');
+    }
+
     final paidEmis = emis.where((emi) => emi.status == EMIStatus.paid).toList();
     final pendingEmis = emis
         .where((emi) => emi.status == EMIStatus.pending)
@@ -417,7 +446,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
     final totalPaid = paidEmis.fold(0.0, (sum, emi) => sum + emi.amount);
     final totalPending = pendingEmis.fold(0.0, (sum, emi) => sum + emi.amount);
     html
-      ..write('</tbody></table><section class="summary">')
+      ..write('<section class="summary">')
       ..write('<h2 class="section-title">${t('paymentSummaryTitle')}</h2>')
       ..write('<div class="summary-grid">')
       ..write(_htmlSummaryItem(t('totalEmisLabel'), '${loan.tenureMonths}'))
@@ -512,9 +541,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
 
     final schedulePages = <List<EMI>>[];
     for (var index = 0; index < emis.length; index += _scheduleRowsPerPage) {
-      schedulePages.add(
-        emis.skip(index).take(_scheduleRowsPerPage).toList(),
-      );
+      schedulePages.add(emis.skip(index).take(_scheduleRowsPerPage).toList());
     }
     if (schedulePages.isEmpty) schedulePages.add(const []);
 
@@ -634,17 +661,16 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       double size = 10,
       bool bold = false,
       material.Color color = const material.Color(0xFF172033),
-    }) =>
-        material.Text(
-          value,
-          style: material.TextStyle(
-            fontSize: size,
-            color: color,
-            fontWeight: bold
-                ? material.FontWeight.bold
-                : material.FontWeight.normal,
-          ),
-        );
+    }) => material.Text(
+      value,
+      style: material.TextStyle(
+        fontSize: size,
+        color: color,
+        fontWeight: bold
+            ? material.FontWeight.bold
+            : material.FontWeight.normal,
+      ),
+    );
 
     Widget section(String title) => Padding(
       padding: const EdgeInsets.only(top: 14, bottom: 8),
@@ -728,85 +754,85 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            if (includeIntro) ...[
-              Container(
-                color: navy,
-                padding: const EdgeInsets.all(16),
-                child: DefaultTextStyle.merge(
-                  style: const TextStyle(color: material.Colors.white),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              if (includeIntro) ...[
+                Container(
+                  color: navy,
+                  padding: const EdgeInsets.all(16),
+                  child: DefaultTextStyle.merge(
+                    style: const TextStyle(color: material.Colors.white),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              text(
+                                t('appTitle'),
+                                size: 19,
+                                bold: true,
+                                color: material.Colors.white,
+                              ),
+                              text(
+                                t('pdfAgreementSubtitle'),
+                                size: 11,
+                                color: material.Colors.white,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             text(
-                              t('appTitle'),
-                              size: 19,
-                              bold: true,
+                              '${t('generatedLabel')}: ${formatDateTime(DateTime.now(), languageCode)}',
+                              size: 8,
                               color: material.Colors.white,
                             ),
                             text(
-                              t('pdfAgreementSubtitle'),
-                              size: 11,
+                              '${t('docIdLabel')}: ${lender.licenseNumber}',
+                              size: 8,
                               color: material.Colors.white,
                             ),
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          text(
-                            '${t('generatedLabel')}: ${formatDateTime(DateTime.now(), languageCode)}',
-                            size: 8,
-                            color: material.Colors.white,
-                          ),
-                          text(
-                            '${t('docIdLabel')}: ${lender.licenseNumber}',
-                            size: 8,
-                            color: material.Colors.white,
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Center(
-                  child: text(t('loanAgreementTitle'), size: 21, bold: true),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Center(
+                    child: text(t('loanAgreementTitle'), size: 21, bold: true),
+                  ),
                 ),
-              ),
-              section(t('partiesTitle')),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _fallbackCard(t('lenderLabel'), [
-                      '${t('lenderName')}: ${lender.name}',
-                      '${t('mobileLabelShort')}: ${lender.mobileNumber}',
-                      '${t('emailLabelShort')}: ${lender.email}',
-                      '${t('addressLabel')}: ${lender.address}',
-                      '${t('licenseLabel')}: ${lender.licenseNumber}',
-                    ]),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _fallbackCard(t('borrowerLabel'), [
-                      '${t('borrowerName')}: ${customer.name}',
-                      '${t('mobileLabelShort')}: ${customer.mobileNumber}',
-                      '${t('emailLabelShort')}: ${customer.email}',
-                      '${t('locationLabelShort')}: ${customer.location}',
-                    ]),
-                  ),
-                ],
-              ),
-              section(t('loanDetailsTitle')),
-              _fallbackLoanDetails(loan, languageCode, currency),
-            ],
+                section(t('partiesTitle')),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _fallbackCard(t('lenderLabel'), [
+                        '${t('lenderName')}: ${lender.name}',
+                        '${t('mobileLabelShort')}: ${lender.mobileNumber}',
+                        '${t('emailLabelShort')}: ${lender.email}',
+                        '${t('addressLabel')}: ${lender.address}',
+                        '${t('licenseLabel')}: ${lender.licenseNumber}',
+                      ]),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _fallbackCard(t('borrowerLabel'), [
+                        '${t('borrowerName')}: ${customer.name}',
+                        '${t('mobileLabelShort')}: ${customer.mobileNumber}',
+                        '${t('emailLabelShort')}: ${customer.email}',
+                        '${t('locationLabelShort')}: ${customer.location}',
+                      ]),
+                    ),
+                  ],
+                ),
+                section(t('loanDetailsTitle')),
+                _fallbackLoanDetails(loan, languageCode, currency),
+              ],
               if (includeSchedule) ...[
                 section(t('emiScheduleTitle')),
                 scheduleTable(),
@@ -843,10 +869,7 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Color(0xFF6B7280)),
-          ),
+          Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
           const SizedBox(height: 4),
           Text(
             value,
@@ -876,62 +899,68 @@ th,td{border:1px solid #cbd5e1;padding:5px 6px;text-align:start;overflow-wrap:an
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            Text(
-              t('paymentSummaryTitle'),
-              style: const TextStyle(
-                color: Color(0xFF172033),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              Text(
+                t('paymentSummaryTitle'),
+                style: const TextStyle(
+                  color: Color(0xFF172033),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                summary(t('totalEmisLabel'), '${loan.tenureMonths}'),
-                summary(t('paidEmisLabel'), '${paid.length}'),
-                summary(t('pendingEmisLabel'), '${pending.length}'),
-              ],
-            ),
-            const material.Divider(height: 30),
-            Row(
-              children: [
-                summary(t('totalPaidLabel'), currency.format(totalPaid)),
-                summary(t('totalPendingLabel'), currency.format(totalPending)),
-                summary(t('totalLoanLabel'), currency.format(loan.totalAmount)),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                Expanded(
-                  child: _fallbackSignature(
-                    t('lenderSignature'),
-                    lender.name,
-                    languageCode,
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  summary(t('totalEmisLabel'), '${loan.tenureMonths}'),
+                  summary(t('paidEmisLabel'), '${paid.length}'),
+                  summary(t('pendingEmisLabel'), '${pending.length}'),
+                ],
+              ),
+              const material.Divider(height: 30),
+              Row(
+                children: [
+                  summary(t('totalPaidLabel'), currency.format(totalPaid)),
+                  summary(
+                    t('totalPendingLabel'),
+                    currency.format(totalPending),
                   ),
-                ),
-                const SizedBox(width: 30),
-                Expanded(
-                  child: _fallbackSignature(
-                    t('borrowerSignature'),
-                    customer.name,
-                    languageCode,
+                  summary(
+                    t('totalLoanLabel'),
+                    currency.format(loan.totalAmount),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 35),
-            Text(
-              t('footerText'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF172033)),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              t('confidentialLabel'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF172033)),
-            ),
+                ],
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  Expanded(
+                    child: _fallbackSignature(
+                      t('lenderSignature'),
+                      lender.name,
+                      languageCode,
+                    ),
+                  ),
+                  const SizedBox(width: 30),
+                  Expanded(
+                    child: _fallbackSignature(
+                      t('borrowerSignature'),
+                      customer.name,
+                      languageCode,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 35),
+              Text(
+                t('footerText'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF172033)),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                t('confidentialLabel'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF172033)),
+              ),
             ],
           ),
         ),

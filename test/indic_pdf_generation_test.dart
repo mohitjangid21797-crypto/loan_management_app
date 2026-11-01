@@ -177,6 +177,34 @@ void main() {
     );
   });
 
+  test('HTML schedules use 30 installments first, then groups of 60', () async {
+    final html = await IndicPdfGenerator.buildHtml(
+      lender: lender,
+      customer: customer,
+      loan: loan,
+      emis: emis.take(121).toList(),
+      languageCode: 'hi',
+    );
+    final tables = RegExp(
+      r'<table class="schedule(?: schedule-continuation)?"><thead>.*?'
+      r'<tbody>(.*?)</tbody></table>',
+      dotAll: true,
+    ).allMatches(html);
+    final scheduleRowCounts = tables
+        .map((table) => RegExp(r'<tr>').allMatches(table.group(1)!).length)
+        .toList();
+
+    expect(scheduleRowCounts, [30, 60, 31]);
+    expect(html, contains('.schedule-continuation{break-before:page;'));
+    expect(
+      html,
+      contains(
+        '<h2 class="section-title">${UiTranslations.translateKey('hi', 'emiScheduleTitle')}</h2>'
+        '<table class="schedule">',
+      ),
+    );
+  });
+
   test('uses the injected HTML renderer and forced raster renderer', () async {
     var htmlRendererCalled = false;
     IndicPdfGenerator.htmlConverterForTesting = (html, format) async {
